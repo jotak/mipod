@@ -22,85 +22,82 @@ import LibLoader = require('./LibLoader');
 import MpdClient = require('./MpdClient');
 
 "use strict";
-class routes {
-    static register(app) {
+export function register(app) {
 
-        app.get('/mpd/configure/:host/:port', function(req, res) {
-            MpdClient.configure(req.params.host, req.params.port);
-        });
+    app.get('/mpd/configure/:host/:port', function(req, res) {
+        MpdClient.configure(req.params.host, req.params.port);
+    });
 
-        app.get('/mpd/play/:path?', function(req, res) {
-            if (req.params.path) {
-                // Clear and add
-                MpdClient.clear();
-                MpdClient.add(req.params.path);
-            }
-            MpdClient.play();
-            res.send("OK");
-        });
-
-        app.get('/mpd/add/:path', function(req, res) {
-            MpdClient.add(req.params.path);
-            res.send("OK");
-        });
-
-        app.get('/mpd/clear', function(req, res) {
+    app.get('/mpd/play/:path?', function(req, res) {
+        if (req.params.path) {
+            // Clear and add
             MpdClient.clear();
-            res.send("OK");
-        });
+            MpdClient.add(req.params.path);
+        }
+        MpdClient.play();
+        res.send("OK");
+    });
 
-        app.get('/mpd/pause', function(req, res) {
-            MpdClient.pause();
-            res.send("OK");
-        });
+    app.get('/mpd/add/:path', function(req, res) {
+        MpdClient.add(req.params.path);
+        res.send("OK");
+    });
 
-        app.get('/mpd/stop', function(req, res) {
-            MpdClient.stop();
-            res.send("OK");
-        });
+    app.get('/mpd/clear', function(req, res) {
+        MpdClient.clear();
+        res.send("OK");
+    });
 
-        app.get('/mpd/next', function(req, res) {
-            MpdClient.next();
-            res.send("OK");
-        });
+    app.get('/mpd/pause', function(req, res) {
+        MpdClient.pause();
+        res.send("OK");
+    });
 
-        app.get('/mpd/prev', function(req, res) {
-            MpdClient.prev();
-            res.send("OK");
-        });
+    app.get('/mpd/stop', function(req, res) {
+        MpdClient.stop();
+        res.send("OK");
+    });
 
-        app.get('/mpd/load/:path', function(req, res) {
-            MpdClient.load(req.params.path);
-            res.send("OK");
-        });
+    app.get('/mpd/next', function(req, res) {
+        MpdClient.next();
+        res.send("OK");
+    });
 
-        app.get('/mpd/custom/:command', function(req, res) {
-            MpdClient.custom(req.params.command);
-            res.send("OK");
-        });
+    app.get('/mpd/prev', function(req, res) {
+        MpdClient.prev();
+        res.send("OK");
+    });
 
-        app.get('/mpd/configure/:host/:port', function(req, res) {
-            MpdClient.configure(req.params.host, req.params.port);
-            res.send("OK");
-        });
+    app.get('/mpd/load/:path', function(req, res) {
+        MpdClient.load(req.params.path);
+        res.send("OK");
+    });
 
-        app.get('/library/loadonce/:treeDesc?', function(req, res) {
-            var treeDesc: string = req.params.treeDesc || "genre,artist,album";
-            LibLoader.loadOnce(res, treeDesc.split(","));
-        });
+    app.get('/mpd/custom/:command', function(req, res) {
+        MpdClient.custom(req.params.command);
+        res.send("OK");
+    });
 
-        app.get('/library/reload/:treeDesc?', function(req, res) {
-            var treeDesc: string = req.params.treeDesc || "genre,artist,album";
-            LibLoader.reload(res, treeDesc.split(","));
-        });
+    app.get('/mpd/configure/:host/:port', function(req, res) {
+        MpdClient.configure(req.params.host, req.params.port);
+        res.send("OK");
+    });
 
-        app.get('/library/progress', function(req, res) {
-            LibLoader.progress(res);
-        });
+    app.get('/library/loadonce/:treeDesc?', function(req, res) {
+        var treeDesc: string = req.params.treeDesc || "genre,artist,album";
+        LibLoader.loadOnce(res, treeDesc.split(","));
+    });
 
-        app.get('/library/get/:start/:count', function(req, res) {
-            LibLoader.getPage(res, req.params.start, req.params.count);
-        });
-    }
+    app.get('/library/reload/:treeDesc?', function(req, res) {
+        var treeDesc: string = req.params.treeDesc || "genre,artist,album";
+        LibLoader.reload(res, treeDesc.split(","));
+    });
+
+    app.get('/library/progress', function(req, res) {
+        LibLoader.progress(res);
+    });
+
+    app.get('/library/get/:start/:count', function(req, res) {
+        LibLoader.getPage(res, req.params.start, req.params.count);
+    });
 }
-export = routes;
