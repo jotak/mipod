@@ -17,19 +17,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
-import LibLoader = require('./LibLoader');
-import MpdClient = require('./MpdClient');
+var LibLoader = require('./LibLoader');
+var MpdClient = require('./MpdClient');
 
 "use strict";
-class routes {
-    static register(app) {
-
-        app.get('/mpd/configure/:host/:port', function(req, res) {
+var routes = (function () {
+    function routes() {
+    }
+    routes.register = function (app) {
+        app.get('/mpd/configure/:host/:port', function (req, res) {
             MpdClient.configure(req.params.host, req.params.port);
         });
 
-        app.get('/mpd/play/:path?', function(req, res) {
+        app.get('/mpd/play/:path?', function (req, res) {
             if (req.params.path) {
                 // Clear and add
                 MpdClient.clear();
@@ -39,68 +39,69 @@ class routes {
             res.send("OK");
         });
 
-        app.get('/mpd/add/:path', function(req, res) {
+        app.get('/mpd/add/:path', function (req, res) {
             MpdClient.add(req.params.path);
             res.send("OK");
         });
 
-        app.get('/mpd/clear', function(req, res) {
+        app.get('/mpd/clear', function (req, res) {
             MpdClient.clear();
             res.send("OK");
         });
 
-        app.get('/mpd/pause', function(req, res) {
+        app.get('/mpd/pause', function (req, res) {
             MpdClient.pause();
             res.send("OK");
         });
 
-        app.get('/mpd/stop', function(req, res) {
+        app.get('/mpd/stop', function (req, res) {
             MpdClient.stop();
             res.send("OK");
         });
 
-        app.get('/mpd/next', function(req, res) {
+        app.get('/mpd/next', function (req, res) {
             MpdClient.next();
             res.send("OK");
         });
 
-        app.get('/mpd/prev', function(req, res) {
+        app.get('/mpd/prev', function (req, res) {
             MpdClient.prev();
             res.send("OK");
         });
 
-        app.get('/mpd/load/:path', function(req, res) {
+        app.get('/mpd/load/:path', function (req, res) {
             MpdClient.load(req.params.path);
             res.send("OK");
         });
 
-        app.get('/mpd/custom/:command', function(req, res) {
+        app.get('/mpd/custom/:command', function (req, res) {
             MpdClient.custom(req.params.command);
             res.send("OK");
         });
 
-        app.get('/mpd/configure/:host/:port', function(req, res) {
+        app.get('/mpd/configure/:host/:port', function (req, res) {
             MpdClient.configure(req.params.host, req.params.port);
             res.send("OK");
         });
 
-        app.get('/library/loadonce/:treeDesc?', function(req, res) {
-            var treeDesc: string = req.params.treeDesc || "genre,artist,album";
+        app.get('/library/loadonce/:treeDesc?', function (req, res) {
+            var treeDesc = req.params.treeDesc || "genre,artist,album";
             LibLoader.loadOnce(res, treeDesc.split(","));
         });
 
-        app.get('/library/reload/:treeDesc?', function(req, res) {
-            var treeDesc: string = req.params.treeDesc || "genre,artist,album";
+        app.get('/library/reload/:treeDesc?', function (req, res) {
+            var treeDesc = req.params.treeDesc || "genre,artist,album";
             LibLoader.reload(res, treeDesc.split(","));
         });
 
-        app.get('/library/progress', function(req, res) {
+        app.get('/library/progress', function (req, res) {
             LibLoader.progress(res);
         });
 
-        app.get('/library/get/:start/:count', function(req, res) {
+        app.get('/library/get/:start/:count', function (req, res) {
             LibLoader.getPage(res, req.params.start, req.params.count);
         });
-    }
-}
-export = routes;
+    };
+    return routes;
+})();
+module.exports = routes;
