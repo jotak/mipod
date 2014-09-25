@@ -1,6 +1,6 @@
 /*
 The MIT License (MIT)
-Copyright (c) 2014 Joel Takvorian
+Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/node-restmpd
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -27,36 +27,34 @@ import q = require('q');
 class LibLoader {
     static loaded: boolean = false;
     static loadingCounter: number = 0;
-    static tree: Tree;
-    static treeDescriptor: string[];
+    static allSongs: SongInfo[];
 
-    static loadOnce(res, treeDescriptor: string[]) {
+    static loadOnce(res) {
         if (this.loaded) {
             // Already loaded, no need to load again.
-            // Note that if the treeDescriptor has changed, client should use "reload" instead
             res.send({status: "OK", numberOfItems: this.loadingCounter});
         } else {
-            this.treeDescriptor = treeDescriptor;
             var that = this;
-            loadAllLib(treeDescriptor).then(function(json: Tree) {
-                that.tree = json;
+            loadAllLib().then(function(json: SongInfo[]) {
+                that.allSongs = json;
                 that.loaded = true;
                 res.send({status: "OK", numberOfItems: that.loadingCounter});
             }).done();
         }
     }
 
-    static reload(res, treeDescriptor: string[]) {
+    static reload(res) {
         this.loaded = false;
         this.loadingCounter = 0;
-        this.tree = undefined;
-        this.loadOnce(res, treeDescriptor);
+        this.allSongs = undefined;
+        this.loadOnce(res);
     }
 
-    static getPage(res, start: number, count: number) {
+    static getPage(res, start: number, count: number, treeDescriptor: string[]) {
         if (this.loaded) {
-            var page: PageSeekerInfo = seekSongsForPage({songs: [], start: start, count: count, treeInfo: {}, treeDescriptor: this.treeDescriptor}, this.tree.root, 0);
-            var subTree: Tree = organizeJsonLib(page.songs, this.treeDescriptor);
+            var subTree: Tree = organizeJsonLib(
+                getSongsPage(this.allSongs, start, count),
+                treeDescriptor);
             res.send({status: "OK", data: subTree.root});
         } else {
             res.send({status: "Error: loading still in progress"}).end();
@@ -94,12 +92,11 @@ interface ParserInfo {
     cursor: number;
 }
 
-function loadAllLib(treeDescriptor: string[]): q.Promise<Tree> {
-    var tree = loadDirForLib([], "")
+function loadAllLib(): q.Promise<SongInfo[]> {
+    return loadDirForLib([], "")
         .then(function(parser: ParserInfo) {
-            return organizeJsonLib(parser.songs, treeDescriptor);
+            return parser.songs;
         });
-    return tree;
 }
 
 function loadDirForLib(songs: SongInfo[], dir: string): q.Promise<ParserInfo> {
@@ -211,54 +208,15 @@ function organizeJsonLib(flat: SongInfo[], treeDescriptor: string[]): Tree {
             treePtr = treePtr[valueForKey];
             depth++;
         });
-        var display: string = song.display
-            || (song.track ? song.track + " - " : "") + song.title;
-        treePtr.push({"file": song.file, "display": display});
+        treePtr.push({"file": song.file, "display": (song.track ? song.track + " - " : "") + song.title});
     });
     return {root: tree};
 }
 
-interface PageSeekerInfo {
-    songs: SongInfo[];
-    start: number;
-    count: number;
-    treeInfo: any;
-    treeDescriptor: string[];
-}
-
-function seekSongsForPage(info: PageSeekerInfo, treePtr: any, depth: number): PageSeekerInfo {
-    var ret: PageSeekerInfo = {
-        songs: info.songs,
-        start: info.start,
-        count: info.count,
-        treeInfo: info.treeInfo,
-        treeDescriptor: info.treeDescriptor
-    };
-
-    if (depth == ret.treeDescriptor.length) {
-        // songs are in this level
-        var nbSongsHere: number = treePtr.length;
-        if (nbSongsHere > ret.start) {
-            // There's songs to be added here
-            var nbSongsToAdd: number = Math.min(nbSongsHere - ret.start, ret.count - ret.songs.length);
-            var splice: SongInfo[] = treePtr.slice(ret.start, ret.start + nbSongsToAdd);
-            splice.forEach(function(song: SongInfo) {
-                for (var tag in ret.treeInfo) {
-                    song[tag] = ret.treeInfo[tag];
-                }
-            });
-            ret.songs = ret.songs.concat(splice);
-        }
-        ret.start = Math.max(0, ret.start - nbSongsHere);
-    } else {
-        // go deeper
-        for (var item in treePtr) {
-            ret.treeInfo[ret.treeDescriptor[depth]] = item;
-            ret = seekSongsForPage(ret, treePtr[item], depth + 1);
-            if (ret.songs.length == ret.count) {
-                return ret;
-            }
-        }
+function getSongsPage(allSongs: SongInfo[], start: number, count: number): SongInfo[] {
+    var end: number = Math.min(allSongs.length, start + count);
+    if (end > start) {
+        return allSongs.slice(start, end);
     }
-    return ret;
+    return [];
 }

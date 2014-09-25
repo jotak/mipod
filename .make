@@ -1,1 +1,1 @@
-server.ts --outDir generated --module commonjs
+restmpd.ts --outDir generated --module commonjs

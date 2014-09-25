@@ -1,6 +1,6 @@
 /*
 The MIT License (MIT)
-Copyright (c) 2014 Joel Takvorian
+Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/node-restmpd
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -21,12 +21,13 @@ var LibLoader = require('./LibLoader');
 var MpdClient = require('./MpdClient');
 
 "use strict";
-function register(app) {
-    app.get('/mpd/configure/:host/:port', function (req, res) {
+function register(app, mpdRoot, libRoot) {
+    app.get(mpdRoot + '/configure/:host/:port', function (req, res) {
         MpdClient.configure(req.params.host, req.params.port);
+        res.send("OK");
     });
 
-    app.get('/mpd/play/:path?', function (req, res) {
+    app.get(mpdRoot + '/play/:path?', function (req, res) {
         if (req.params.path) {
             // Clear and add
             MpdClient.clear();
@@ -36,67 +37,69 @@ function register(app) {
         res.send("OK");
     });
 
-    app.get('/mpd/add/:path', function (req, res) {
+    app.get(mpdRoot + '/add/:path', function (req, res) {
         MpdClient.add(req.params.path);
         res.send("OK");
     });
 
-    app.get('/mpd/clear', function (req, res) {
+    app.get(mpdRoot + '/clear', function (req, res) {
         MpdClient.clear();
         res.send("OK");
     });
 
-    app.get('/mpd/pause', function (req, res) {
+    app.get(mpdRoot + '/pause', function (req, res) {
         MpdClient.pause();
         res.send("OK");
     });
 
-    app.get('/mpd/stop', function (req, res) {
+    app.get(mpdRoot + '/stop', function (req, res) {
         MpdClient.stop();
         res.send("OK");
     });
 
-    app.get('/mpd/next', function (req, res) {
+    app.get(mpdRoot + '/next', function (req, res) {
         MpdClient.next();
         res.send("OK");
     });
 
-    app.get('/mpd/prev', function (req, res) {
+    app.get(mpdRoot + '/prev', function (req, res) {
         MpdClient.prev();
         res.send("OK");
     });
 
-    app.get('/mpd/load/:path', function (req, res) {
+    app.get(mpdRoot + '/load/:path', function (req, res) {
         MpdClient.load(req.params.path);
         res.send("OK");
     });
 
-    app.get('/mpd/custom/:command', function (req, res) {
+    app.get(mpdRoot + '/custom/:command', function (req, res) {
         MpdClient.custom(req.params.command);
         res.send("OK");
     });
 
-    app.get('/mpd/configure/:host/:port', function (req, res) {
-        MpdClient.configure(req.params.host, req.params.port);
-        res.send("OK");
+    app.get(libRoot + '/loadonce', function (req, res) {
+        LibLoader.loadOnce(res);
     });
 
-    app.get('/library/loadonce/:treeDesc?', function (req, res) {
-        var treeDesc = req.params.treeDesc || "genre,artist,album";
-        LibLoader.loadOnce(res, treeDesc.split(","));
+    app.get(libRoot + '/reload', function (req, res) {
+        LibLoader.reload(res);
     });
 
-    app.get('/library/reload/:treeDesc?', function (req, res) {
-        var treeDesc = req.params.treeDesc || "genre,artist,album";
-        LibLoader.reload(res, treeDesc.split(","));
-    });
-
-    app.get('/library/progress', function (req, res) {
+    app.get(libRoot + '/progress', function (req, res) {
         LibLoader.progress(res);
     });
 
-    app.get('/library/get/:start/:count', function (req, res) {
-        LibLoader.getPage(res, req.params.start, req.params.count);
+    app.get(libRoot + '/get/:start/:count/:treeDesc?', function (req, res) {
+        var treeDesc = req.params.treeDesc || "genre,artist,album";
+        LibLoader.getPage(res, req.params.start, req.params.count, treeDesc.split(","));
+    });
+
+    app.get(mpdRoot, function (req, res) {
+        res.send("Available resources on " + mpdRoot + " are: <br/><ul>" + "<li>" + mpdRoot + "/configure/:host/:port</li>" + "<li>" + mpdRoot + "/play/:path?</li>" + "<li>" + mpdRoot + "/add/:path</li>" + "<li>" + mpdRoot + "/clear</li>" + "<li>" + mpdRoot + "/pause</li>" + "<li>" + mpdRoot + "/stop</li>" + "<li>" + mpdRoot + "/next</li>" + "<li>" + mpdRoot + "/prev</li>" + "<li>" + mpdRoot + "/load/:path</li>" + "<li>" + mpdRoot + "/custom/:command</li>" + "</ul>Check documentation on <a href='https://github.com/jotak/node-restmpd'>https://github.com/jotak/node-restmpd</a>");
+    });
+
+    app.get(libRoot, function (req, res) {
+        res.send("Available resources on " + libRoot + " are: <br/><ul>" + "<li>" + libRoot + "/loadonce</li>" + "<li>" + libRoot + "/reload</li>" + "<li>" + libRoot + "/progress</li>" + "<li>" + libRoot + "/get/:start/:count/:treeDesc?</li>" + "</ul>Check documentation on <a href='https://github.com/jotak/node-restmpd'>https://github.com/jotak/node-restmpd</a>");
     });
 }
 exports.register = register;
