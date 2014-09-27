@@ -50,11 +50,12 @@ class LibLoader {
         this.loadOnce(res);
     }
 
-    static getPage(res, start: number, count: number, treeDescriptor: string[]) {
+    static getPage(res, start: number, count: number, treeDescriptor: string[], leafDescriptor: string[]) {
         if (this.loaded) {
             var subTree: Tree = organizeJsonLib(
                 getSongsPage(this.allSongs, start, count),
-                treeDescriptor);
+                treeDescriptor,
+                leafDescriptor);
             res.send({status: "OK", data: subTree.root});
         } else {
             res.send({status: "Error: loading still in progress"}).end();
@@ -83,7 +84,6 @@ interface SongInfo {
     date?: string;
     genre?: string;
     composer?: string;
-    display?: string;
 }
 
 interface ParserInfo {
@@ -188,7 +188,7 @@ function parseNext(parser: ParserInfo): q.Promise<ParserInfo> {
 }
 
 // Returns a custom object tree corresponding to the descriptor
-function organizeJsonLib(flat: SongInfo[], treeDescriptor: string[]): Tree {
+function organizeJsonLib(flat: SongInfo[], treeDescriptor: string[], leafDescriptor: string[]): Tree {
     var tree = {};
     flat.forEach(function(song: SongInfo) {
         var treePtr: any = tree;
@@ -208,7 +208,11 @@ function organizeJsonLib(flat: SongInfo[], treeDescriptor: string[]): Tree {
             treePtr = treePtr[valueForKey];
             depth++;
         });
-        treePtr.push({"file": song.file, "display": (song.track ? song.track + " - " : "") + song.title});
+        var leaf = {};
+        leafDescriptor.forEach(function(key: string) {
+            leaf[key] = song[key];
+        });
+        treePtr.push(leaf);
     });
     return {root: tree};
 }

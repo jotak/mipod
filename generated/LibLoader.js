@@ -47,9 +47,9 @@ var LibLoader = (function () {
         this.loadOnce(res);
     };
 
-    LibLoader.getPage = function (res, start, count, treeDescriptor) {
+    LibLoader.getPage = function (res, start, count, treeDescriptor, leafDescriptor) {
         if (this.loaded) {
-            var subTree = organizeJsonLib(getSongsPage(this.allSongs, start, count), treeDescriptor);
+            var subTree = organizeJsonLib(getSongsPage(this.allSongs, start, count), treeDescriptor, leafDescriptor);
             res.send({ status: "OK", data: subTree.root });
         } else {
             res.send({ status: "Error: loading still in progress" }).end();
@@ -158,7 +158,7 @@ function parseNext(parser) {
 }
 
 // Returns a custom object tree corresponding to the descriptor
-function organizeJsonLib(flat, treeDescriptor) {
+function organizeJsonLib(flat, treeDescriptor, leafDescriptor) {
     var tree = {};
     flat.forEach(function (song) {
         var treePtr = tree;
@@ -178,7 +178,11 @@ function organizeJsonLib(flat, treeDescriptor) {
             treePtr = treePtr[valueForKey];
             depth++;
         });
-        treePtr.push({ "file": song.file, "display": (song.track ? song.track + " - " : "") + song.title });
+        var leaf = {};
+        leafDescriptor.forEach(function (key) {
+            leaf[key] = song[key];
+        });
+        treePtr.push(leaf);
     });
     return { root: tree };
 }

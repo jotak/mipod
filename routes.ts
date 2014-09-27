@@ -25,7 +25,7 @@ import MpdClient = require('./MpdClient');
 export function register(app, mpdRoot: string, libRoot: string) {
 
     app.get(mpdRoot + '/configure/:host/:port', function(req, res) {
-        MpdClient.configure(req.params.host, req.params.port);
+        MpdClient.configure(req.params.host, +req.params.port);
         res.send("OK");
     });
 
@@ -91,9 +91,10 @@ export function register(app, mpdRoot: string, libRoot: string) {
         LibLoader.progress(res);
     });
 
-    app.get(libRoot + '/get/:start/:count/:treeDesc?', function(req, res) {
+    app.get(libRoot + '/get/:start/:count/:treeDesc?/:leafDesc?', function(req, res) {
         var treeDesc: string = req.params.treeDesc || "genre,artist,album";
-        LibLoader.getPage(res, req.params.start, req.params.count, treeDesc.split(","));
+        var leafDesc: string = req.params.leafDesc || "file,track,title";
+        LibLoader.getPage(res, +req.params.start, +req.params.count, treeDesc.split(","), leafDesc.split(","));
     });
 
     app.get(mpdRoot, function(req, res) {
