@@ -1,6 +1,6 @@
 /*
 The MIT License (MIT)
-Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/node-restmpd
+Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/mipod
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -34,6 +34,11 @@ function register(app, mpdRoot, libRoot) {
             MpdClient.add(req.params.path);
         }
         MpdClient.play();
+        res.send("OK");
+    });
+
+    app.get(mpdRoot + '/playidx/:idx', function (req, res) {
+        MpdClient.playIdx(+req.params.idx);
         res.send("OK");
     });
 
@@ -72,6 +77,36 @@ function register(app, mpdRoot, libRoot) {
         res.send("OK");
     });
 
+    app.get(mpdRoot + '/volume/:value', function (req, res) {
+        MpdClient.volume(req.params.value);
+        res.send("OK");
+    });
+
+    app.get(mpdRoot + '/repeat/:enabled', function (req, res) {
+        MpdClient.repeat(req.params.enabled === "1");
+        res.send("OK");
+    });
+
+    app.get(mpdRoot + '/random/:enabled', function (req, res) {
+        MpdClient.random(req.params.enabled === "1");
+        res.send("OK");
+    });
+
+    app.get(mpdRoot + '/single/:enabled', function (req, res) {
+        MpdClient.single(req.params.enabled === "1");
+        res.send("OK");
+    });
+
+    app.get(mpdRoot + '/consume/:enabled', function (req, res) {
+        MpdClient.consume(req.params.enabled === "1");
+        res.send("OK");
+    });
+
+    app.get(mpdRoot + '/seek/:songIdx/:posInSong', function (req, res) {
+        MpdClient.seek(+req.params.songIdx, +req.params.posInSong);
+        res.send("OK");
+    });
+
     app.get(mpdRoot + '/custom/:command', function (req, res) {
         MpdClient.custom(req.params.command);
         res.send("OK");
@@ -96,11 +131,11 @@ function register(app, mpdRoot, libRoot) {
     });
 
     app.get(mpdRoot, function (req, res) {
-        res.send("Available resources on " + mpdRoot + " are: <br/><ul>" + "<li>" + mpdRoot + "/configure/:host/:port</li>" + "<li>" + mpdRoot + "/play/:path?</li>" + "<li>" + mpdRoot + "/add/:path</li>" + "<li>" + mpdRoot + "/clear</li>" + "<li>" + mpdRoot + "/pause</li>" + "<li>" + mpdRoot + "/stop</li>" + "<li>" + mpdRoot + "/next</li>" + "<li>" + mpdRoot + "/prev</li>" + "<li>" + mpdRoot + "/load/:path</li>" + "<li>" + mpdRoot + "/custom/:command</li>" + "</ul>Check documentation on <a href='https://github.com/jotak/node-restmpd'>https://github.com/jotak/node-restmpd</a>");
+        res.send("Available resources on " + mpdRoot + " are: <br/><ul>" + "<li>" + mpdRoot + "/configure/:host/:port</li>" + "<li>" + mpdRoot + "/play/:path?</li>" + "<li>" + mpdRoot + "/playidx/:idx</li>" + "<li>" + mpdRoot + "/add/:path</li>" + "<li>" + mpdRoot + "/clear</li>" + "<li>" + mpdRoot + "/pause</li>" + "<li>" + mpdRoot + "/stop</li>" + "<li>" + mpdRoot + "/next</li>" + "<li>" + mpdRoot + "/prev</li>" + "<li>" + mpdRoot + "/load/:path</li>" + "<li>" + mpdRoot + "/volume/:value</li>" + "<li>" + mpdRoot + "/repeat/:enabled</li>" + "<li>" + mpdRoot + "/random/:enabled</li>" + "<li>" + mpdRoot + "/single/:enabled</li>" + "<li>" + mpdRoot + "/consume/:enabled</li>" + "<li>" + mpdRoot + "/seek/:songIdx/:posInSong</li>" + "<li>" + mpdRoot + "/custom/:command</li>" + "</ul>Check documentation on <a href='https://github.com/jotak/mipod'>https://github.com/jotak/mipod</a>");
     });
 
     app.get(libRoot, function (req, res) {
-        res.send("Available resources on " + libRoot + " are: <br/><ul>" + "<li>" + libRoot + "/loadonce</li>" + "<li>" + libRoot + "/reload</li>" + "<li>" + libRoot + "/progress</li>" + "<li>" + libRoot + "/get/:start/:count/:treeDesc?</li>" + "</ul>Check documentation on <a href='https://github.com/jotak/node-restmpd'>https://github.com/jotak/node-restmpd</a>");
+        res.send("Available resources on " + libRoot + " are: <br/><ul>" + "<li>" + libRoot + "/loadonce</li>" + "<li>" + libRoot + "/reload</li>" + "<li>" + libRoot + "/progress</li>" + "<li>" + libRoot + "/get/:start/:count/:treeDesc?/:leafDesc?</li>" + "</ul>Check documentation on <a href='https://github.com/jotak/mipod'>https://github.com/jotak/mipod</a>");
     });
 }
 exports.register = register;

@@ -1,6 +1,6 @@
 /*
 The MIT License (MIT)
-Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/node-restmpd
+Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/mipod
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -29,7 +29,7 @@ var mpdRestRoot = "/mpd";
 var libraryRestRoot = "/library";
 
 function usage() {
-    console.log("Usage: node restmpd [options=values]");
+    console.log("Usage: node mipod-rest [options=values]");
     console.log("");
     console.log("Options:");
     console.log("  -p, --port          setup server port (default 8081)");
@@ -38,9 +38,9 @@ function usage() {
     console.log("  -h, --help          this");
     console.log("");
     console.log("Example:");
-    console.log("  node restmpd -p=80 -m=/some/resource -l=/another/resource");
+    console.log("  node mipod-rest -p=80 -m=/some/resource -l=/another/resource");
     console.log("");
-    console.log("More documentation available on https://github.com/jotak/node-restmpd");
+    console.log("More documentation available on https://github.com/jotak/mipod");
 }
 
 var mapParams = {

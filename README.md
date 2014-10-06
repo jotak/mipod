@@ -1,4 +1,4 @@
-node-restmpd
+mipod
 ============
 
 A nodejs module for exposing an MPD REST API. Written in Typescript.

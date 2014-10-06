@@ -1,6 +1,6 @@
 /*
 The MIT License (MIT)
-Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/node-restmpd
+Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/mipod
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -66,6 +66,10 @@ var MpdClient = (function () {
         this.execAndForget("play");
     };
 
+    MpdClient.playIdx = function (idx) {
+        this.execAndForget("play " + idx);
+    };
+
     MpdClient.pause = function () {
         this.execAndForget("pause");
     };
@@ -92,6 +96,30 @@ var MpdClient = (function () {
 
     MpdClient.load = function (playlist) {
         this.execAndForget("load " + playlist);
+    };
+
+    MpdClient.volume = function (value) {
+        this.execAndForget("setvol " + value);
+    };
+
+    MpdClient.repeat = function (enabled) {
+        this.execAndForget("repeat " + (enabled ? "1" : "0"));
+    };
+
+    MpdClient.random = function (enabled) {
+        this.execAndForget("random " + (enabled ? "1" : "0"));
+    };
+
+    MpdClient.single = function (enabled) {
+        this.execAndForget("single " + (enabled ? "1" : "0"));
+    };
+
+    MpdClient.consume = function (enabled) {
+        this.execAndForget("consume " + (enabled ? "1" : "0"));
+    };
+
+    MpdClient.seek = function (songIdx, posInSong) {
+        this.execAndForget("seek " + songIdx + " " + posInSong);
     };
 
     MpdClient.custom = function (cmd) {

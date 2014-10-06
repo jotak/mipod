@@ -1,6 +1,6 @@
 /*
 The MIT License (MIT)
-Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/node-restmpd
+Copyright (c) 2014 Joel Takvorian, https://github.com/jotak/mipod
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -74,6 +74,10 @@ class MpdClient {
         this.execAndForget("play");
     }
 
+    static playIdx(idx: number) {
+        this.execAndForget("play " + idx);
+    }
+
     static pause() {
         this.execAndForget("pause");
     }
@@ -100,6 +104,30 @@ class MpdClient {
 
     static load(playlist: string) {
         this.execAndForget("load " + playlist);
+    }
+
+    static volume(value: string) {
+        this.execAndForget("setvol " + value);
+    }
+
+    static repeat(enabled: boolean) {
+        this.execAndForget("repeat " + (enabled ? "1" : "0"));
+    }
+
+    static random(enabled: boolean) {
+        this.execAndForget("random " + (enabled ? "1" : "0"));
+    }
+
+    static single(enabled: boolean) {
+        this.execAndForget("single " + (enabled ? "1" : "0"));
+    }
+
+    static consume(enabled: boolean) {
+        this.execAndForget("consume " + (enabled ? "1" : "0"));
+    }
+
+    static seek(songIdx: number, posInSong: number) {
+        this.execAndForget("seek " + songIdx + " " + posInSong);
     }
 
     static custom(cmd: string) {
