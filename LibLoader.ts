@@ -100,7 +100,7 @@ function loadAllLib(): q.Promise<SongInfo[]> {
 }
 
 function loadDirForLib(songs: SongInfo[], dir: string): q.Promise<ParserInfo> {
-    return MpdClient.exec("lsinfo \"" + dir + "\"")
+    return MpdClient.lsinfo(dir)
         .then(function(response: string) {
             var lines: string[] = response.split("\n");
             return parseNext({ songs: songs, lines: lines, cursor: 0 });

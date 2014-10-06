@@ -61,77 +61,83 @@ class MpdClient {
         this.port = port;
     }
 
-    static exec(cmd: string): q.Promise<string> {
+    private static exec(cmd: string): q.Promise<string> {
         var mpd = new MpdClient(cmd);
         return mpd.deferred.promise;
     }
 
-    private static execAndForget(cmd: string) {
-        new MpdClient(cmd).deferred.promise.done();
+    static play(): q.Promise<string> {
+        return this.exec("play");
     }
 
-    static play() {
-        this.execAndForget("play");
+    static playEntry(path: string): q.Promise<string> {
+        return this.clear().then(function(res: string) {
+            return this.add(path);
+        }).then(this.play);
     }
 
-    static playIdx(idx: number) {
-        this.execAndForget("play " + idx);
+    static playIdx(idx: number): q.Promise<string> {
+        return this.exec("play " + idx);
     }
 
-    static pause() {
-        this.execAndForget("pause");
+    static pause(): q.Promise<string> {
+        return this.exec("pause");
     }
 
-    static stop() {
-        this.execAndForget("stop");
+    static stop(): q.Promise<string> {
+        return this.exec("stop");
     }
 
-    static prev() {
-        this.execAndForget("previous");
+    static prev(): q.Promise<string> {
+        return this.exec("previous");
     }
 
-    static next() {
-        this.execAndForget("next");
+    static next(): q.Promise<string> {
+        return this.exec("next");
     }
 
-    static clear() {
-        this.execAndForget("clear");
+    static clear(): q.Promise<string> {
+        return this.exec("clear");
     }
 
-    static add(uri: string) {
-        this.execAndForget("add " + uri);
+    static add(uri: string): q.Promise<string> {
+        return this.exec("add " + uri);
     }
 
-    static load(playlist: string) {
-        this.execAndForget("load " + playlist);
+    static load(playlist: string): q.Promise<string> {
+        return this.exec("load " + playlist);
     }
 
-    static volume(value: string) {
-        this.execAndForget("setvol " + value);
+    static volume(value: string): q.Promise<string> {
+        return this.exec("setvol " + value);
     }
 
-    static repeat(enabled: boolean) {
-        this.execAndForget("repeat " + (enabled ? "1" : "0"));
+    static repeat(enabled: boolean): q.Promise<string> {
+        return this.exec("repeat " + (enabled ? "1" : "0"));
     }
 
-    static random(enabled: boolean) {
-        this.execAndForget("random " + (enabled ? "1" : "0"));
+    static random(enabled: boolean): q.Promise<string> {
+        return this.exec("random " + (enabled ? "1" : "0"));
     }
 
-    static single(enabled: boolean) {
-        this.execAndForget("single " + (enabled ? "1" : "0"));
+    static single(enabled: boolean): q.Promise<string> {
+        return this.exec("single " + (enabled ? "1" : "0"));
     }
 
-    static consume(enabled: boolean) {
-        this.execAndForget("consume " + (enabled ? "1" : "0"));
+    static consume(enabled: boolean): q.Promise<string> {
+        return this.exec("consume " + (enabled ? "1" : "0"));
     }
 
-    static seek(songIdx: number, posInSong: number) {
-        this.execAndForget("seek " + songIdx + " " + posInSong);
+    static seek(songIdx: number, posInSong: number): q.Promise<string> {
+        return this.exec("seek " + songIdx + " " + posInSong);
     }
 
-    static custom(cmd: string) {
-        this.execAndForget(cmd);
+    static lsinfo(dir: string): q.Promise<string> {
+        return this.exec("lsinfo \"" + dir + "\"");
+    }
+
+    static custom(cmd: string): q.Promise<string> {
+        return this.exec(cmd);
     }
 }
 export = MpdClient;

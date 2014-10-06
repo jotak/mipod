@@ -20,6 +20,15 @@ SOFTWARE.
 
 import LibLoader = require('./LibLoader');
 import MpdClient = require('./MpdClient');
+import q = require('q');
+
+function answerOnPromise(promise: q.Promise<string>, httpResponse: any) {
+    promise.then(function(mpdResponse: string) {
+        httpResponse.send(mpdResponse);
+    }).fail(function(reason: Error) {
+        httpResponse.send(reason);
+    }).done();
+}
 
 "use strict";
 export function register(app, mpdRoot: string, libRoot: string) {
@@ -32,11 +41,10 @@ export function register(app, mpdRoot: string, libRoot: string) {
     app.get(mpdRoot + '/play/:path?', function(req, res) {
         if (req.params.path) {
             // Clear and add
-            MpdClient.clear();
-            MpdClient.add(req.params.path);
+            answerOnPromise(MpdClient.playEntry(req.params.path), res);
+        } else {
+            answerOnPromise(MpdClient.play(), res);
         }
-        MpdClient.play();
-        res.send("OK");
     });
 
     app.get(mpdRoot + '/playidx/:idx', function(req, res) {
