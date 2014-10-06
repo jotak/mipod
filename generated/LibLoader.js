@@ -71,7 +71,7 @@ function loadAllLib() {
 }
 
 function loadDirForLib(songs, dir) {
-    return MpdClient.exec("lsinfo \"" + dir + "\"").then(function (response) {
+    return MpdClient.lsinfo(dir).then(function (response) {
         var lines = response.split("\n");
         return parseNext({ songs: songs, lines: lines, cursor: 0 });
     });

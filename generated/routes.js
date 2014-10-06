@@ -20,6 +20,14 @@ SOFTWARE.
 var LibLoader = require('./LibLoader');
 var MpdClient = require('./MpdClient');
 
+function answerOnPromise(promise, httpResponse) {
+    promise.then(function (mpdResponse) {
+        httpResponse.send(mpdResponse);
+    }).fail(function (reason) {
+        httpResponse.send(reason);
+    }).done();
+}
+
 "use strict";
 function register(app, mpdRoot, libRoot) {
     app.get(mpdRoot + '/configure/:host/:port', function (req, res) {
@@ -30,86 +38,82 @@ function register(app, mpdRoot, libRoot) {
     app.get(mpdRoot + '/play/:path?', function (req, res) {
         if (req.params.path) {
             // Clear and add
-            MpdClient.clear();
-            MpdClient.add(req.params.path);
+            answerOnPromise(MpdClient.playEntry(req.params.path), res);
+        } else {
+            answerOnPromise(MpdClient.play(), res);
         }
-        MpdClient.play();
-        res.send("OK");
     });
 
     app.get(mpdRoot + '/playidx/:idx', function (req, res) {
-        MpdClient.playIdx(+req.params.idx);
-        res.send("OK");
+        answerOnPromise(MpdClient.playIdx(+req.params.idx), res);
     });
 
     app.get(mpdRoot + '/add/:path', function (req, res) {
-        MpdClient.add(req.params.path);
-        res.send("OK");
+        answerOnPromise(MpdClient.add(req.params.path), res);
     });
 
     app.get(mpdRoot + '/clear', function (req, res) {
-        MpdClient.clear();
-        res.send("OK");
+        answerOnPromise(MpdClient.clear(), res);
     });
 
     app.get(mpdRoot + '/pause', function (req, res) {
-        MpdClient.pause();
-        res.send("OK");
+        answerOnPromise(MpdClient.pause(), res);
     });
 
     app.get(mpdRoot + '/stop', function (req, res) {
-        MpdClient.stop();
-        res.send("OK");
+        answerOnPromise(MpdClient.stop(), res);
     });
 
     app.get(mpdRoot + '/next', function (req, res) {
-        MpdClient.next();
-        res.send("OK");
+        answerOnPromise(MpdClient.next(), res);
     });
 
     app.get(mpdRoot + '/prev', function (req, res) {
-        MpdClient.prev();
-        res.send("OK");
+        answerOnPromise(MpdClient.prev(), res);
     });
 
     app.get(mpdRoot + '/load/:path', function (req, res) {
-        MpdClient.load(req.params.path);
-        res.send("OK");
+        answerOnPromise(MpdClient.load(req.params.path), res);
     });
 
     app.get(mpdRoot + '/volume/:value', function (req, res) {
-        MpdClient.volume(req.params.value);
-        res.send("OK");
+        answerOnPromise(MpdClient.volume(req.params.value), res);
     });
 
     app.get(mpdRoot + '/repeat/:enabled', function (req, res) {
-        MpdClient.repeat(req.params.enabled === "1");
-        res.send("OK");
+        answerOnPromise(MpdClient.repeat(req.params.enabled === "1"), res);
     });
 
     app.get(mpdRoot + '/random/:enabled', function (req, res) {
-        MpdClient.random(req.params.enabled === "1");
-        res.send("OK");
+        answerOnPromise(MpdClient.random(req.params.enabled === "1"), res);
     });
 
     app.get(mpdRoot + '/single/:enabled', function (req, res) {
-        MpdClient.single(req.params.enabled === "1");
-        res.send("OK");
+        answerOnPromise(MpdClient.single(req.params.enabled === "1"), res);
     });
 
     app.get(mpdRoot + '/consume/:enabled', function (req, res) {
-        MpdClient.consume(req.params.enabled === "1");
-        res.send("OK");
+        answerOnPromise(MpdClient.consume(req.params.enabled === "1"), res);
     });
 
     app.get(mpdRoot + '/seek/:songIdx/:posInSong', function (req, res) {
-        MpdClient.seek(+req.params.songIdx, +req.params.posInSong);
-        res.send("OK");
+        answerOnPromise(MpdClient.seek(+req.params.songIdx, +req.params.posInSong), res);
+    });
+
+    app.get(mpdRoot + '/rmqueue/:songIdx', function (req, res) {
+        answerOnPromise(MpdClient.removeFromQueue(+req.params.songIdx), res);
+    });
+
+    app.get(mpdRoot + '/deletelist/:name', function (req, res) {
+        answerOnPromise(MpdClient.deleteList(req.params.name), res);
+    });
+
+    app.get(mpdRoot + '/savelist/:name', function (req, res) {
+        answerOnPromise(MpdClient.saveList(req.params.name), res);
     });
 
     app.get(mpdRoot + '/custom/:command', function (req, res) {
-        MpdClient.custom(req.params.command);
-        res.send("OK");
+        answerOnPromise(MpdClient.custom(req.params.command), res);
     });
 
     app.get(libRoot + '/loadonce', function (req, res) {

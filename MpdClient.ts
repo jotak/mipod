@@ -132,6 +132,20 @@ class MpdClient {
         return this.exec("seek " + songIdx + " " + posInSong);
     }
 
+    static removeFromQueue(songIdx: number): q.Promise<string> {
+        return this.exec("delete " + songIdx);
+    }
+
+    static deleteList(name: string): q.Promise<string> {
+        return this.exec("rm \"" + name + "\"");
+    }
+
+    static saveList(name: string): q.Promise<string> {
+        return this.deleteList(name).then(function(res: string) {
+            return this.exec("save \"" + name + "\"");
+        });
+    }
+
     static lsinfo(dir: string): q.Promise<string> {
         return this.exec("lsinfo \"" + dir + "\"");
     }
