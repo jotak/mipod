@@ -26,7 +26,8 @@ function answerOnPromise(promise: q.Promise<string>, httpResponse: any) {
     promise.then(function(mpdResponse: string) {
         httpResponse.send(mpdResponse);
     }).fail(function(reason: Error) {
-        httpResponse.send(reason);
+        console.log("Application error: " + reason.message);
+        httpResponse.status(500).send(String(reason));
     }).done();
 }
 

@@ -75,7 +75,11 @@ var LibLoader = (function () {
 
 function splitOnce(str, separator) {
     var i = str.indexOf(separator);
-    return { key: str.slice(0, i), value: str.slice(i + separator.length) };
+    if (i >= 0) {
+        return { key: str.slice(0, i), value: str.slice(i + separator.length) };
+    } else {
+        return { key: "", value: str.slice(i + separator.length) };
+    }
 }
 
 function loadAllLib() {

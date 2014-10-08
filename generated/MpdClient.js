@@ -32,7 +32,7 @@ var MpdClient = (function () {
         this.socket.on('data', function (data) {
             if (that.ack) {
                 that.socket.destroy();
-                that.deferred.resolve(String(data));
+                that.deferred.resolve(String(data).trim());
             } else {
                 that.ack = true;
                 that.socket.write(that.cmd);
@@ -54,6 +54,7 @@ var MpdClient = (function () {
     };
 
     MpdClient.exec = function (cmd) {
+        console.log(cmd);
         var mpd = new MpdClient(cmd);
         return mpd.deferred.promise;
     };
@@ -93,7 +94,19 @@ var MpdClient = (function () {
     };
 
     MpdClient.add = function (uri) {
-        return MpdClient.exec("add \"" + uri + "\"");
+        var cmd = "add";
+
+        // Playlists need to be "loaded" instead of "added"
+        if (uri.indexOf(".m3u") >= 0 || uri.indexOf(".pls") >= 0 || uri.indexOf("/") < 0) {
+            cmd = "load";
+        }
+        return MpdClient.exec(cmd + " \"" + uri + "\"").then(function (response) {
+            if (response == "OK") {
+                return response;
+            } else {
+                throw new Error(response);
+            }
+        });
     };
 
     MpdClient.load = function (playlist) {

@@ -36,7 +36,7 @@ class MpdClient {
         this.socket.on('data', function(data) {
             if (that.ack) {
                 that.socket.destroy();
-                that.deferred.resolve(String(data));
+                that.deferred.resolve(String(data).trim());
             } else {
                 that.ack = true;
                 that.socket.write(that.cmd);
@@ -62,6 +62,7 @@ class MpdClient {
     }
 
     private static exec(cmd: string): q.Promise<string> {
+        console.log(cmd);
         var mpd = new MpdClient(cmd);
         return mpd.deferred.promise;
     }
@@ -101,7 +102,20 @@ class MpdClient {
     }
 
     static add(uri: string): q.Promise<string> {
-        return MpdClient.exec("add \"" + uri + "\"");
+        var cmd: string = "add";
+        // Playlists need to be "loaded" instead of "added"
+        if (uri.indexOf(".m3u") >= 0
+                || uri.indexOf(".pls") >= 0
+                || uri.indexOf("/") < 0/*for MPD-created playlists*/) {
+            cmd = "load";
+        }
+        return MpdClient.exec(cmd + " \"" + uri + "\"").then(function(response: string) {
+            if (response == "OK") {
+                return response;
+            } else {
+                throw new Error(response);
+            }
+        });
     }
 
     static load(playlist: string): q.Promise<string> {
