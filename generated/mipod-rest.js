@@ -19,11 +19,14 @@ SOFTWARE.
 */
 /// <reference path="node/node.d.ts" />
 /// <reference path="express/express.d.ts" />
+/// <reference path="body-parser/body-parser.d.ts" />
 var express = require('express');
+var bodyParser = require('body-parser');
 var routes = require('./routes');
 
 "use strict";
 var app = express();
+app.use(bodyParser.json());
 var port = 8081;
 var mpdRestRoot = "/mpd";
 var libraryRestRoot = "/library";

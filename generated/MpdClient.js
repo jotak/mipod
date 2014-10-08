@@ -59,91 +59,119 @@ var MpdClient = (function () {
     };
 
     MpdClient.play = function () {
-        return this.exec("play");
+        return MpdClient.exec("play");
     };
 
     MpdClient.playEntry = function (path) {
-        return this.clear().then(function (res) {
-            return this.add(path);
-        }).then(this.play);
+        return MpdClient.clear().then(function (res) {
+            return MpdClient.add(path);
+        }).then(MpdClient.play);
     };
 
     MpdClient.playIdx = function (idx) {
-        return this.exec("play " + idx);
+        return MpdClient.exec("play " + idx);
     };
 
     MpdClient.pause = function () {
-        return this.exec("pause");
+        return MpdClient.exec("pause");
     };
 
     MpdClient.stop = function () {
-        return this.exec("stop");
+        return MpdClient.exec("stop");
     };
 
     MpdClient.prev = function () {
-        return this.exec("previous");
+        return MpdClient.exec("previous");
     };
 
     MpdClient.next = function () {
-        return this.exec("next");
+        return MpdClient.exec("next");
     };
 
     MpdClient.clear = function () {
-        return this.exec("clear");
+        return MpdClient.exec("clear");
     };
 
     MpdClient.add = function (uri) {
-        return this.exec("add " + uri);
+        return MpdClient.exec("add \"" + uri + "\"");
     };
 
     MpdClient.load = function (playlist) {
-        return this.exec("load " + playlist);
+        return MpdClient.exec("load \"" + playlist + "\"");
     };
 
     MpdClient.volume = function (value) {
-        return this.exec("setvol " + value);
+        return MpdClient.exec("setvol " + value);
     };
 
     MpdClient.repeat = function (enabled) {
-        return this.exec("repeat " + (enabled ? "1" : "0"));
+        return MpdClient.exec("repeat " + (enabled ? "1" : "0"));
     };
 
     MpdClient.random = function (enabled) {
-        return this.exec("random " + (enabled ? "1" : "0"));
+        return MpdClient.exec("random " + (enabled ? "1" : "0"));
     };
 
     MpdClient.single = function (enabled) {
-        return this.exec("single " + (enabled ? "1" : "0"));
+        return MpdClient.exec("single " + (enabled ? "1" : "0"));
     };
 
     MpdClient.consume = function (enabled) {
-        return this.exec("consume " + (enabled ? "1" : "0"));
+        return MpdClient.exec("consume " + (enabled ? "1" : "0"));
     };
 
     MpdClient.seek = function (songIdx, posInSong) {
-        return this.exec("seek " + songIdx + " " + posInSong);
+        return MpdClient.exec("seek " + songIdx + " " + posInSong);
     };
 
     MpdClient.removeFromQueue = function (songIdx) {
-        return this.exec("delete " + songIdx);
+        return MpdClient.exec("delete " + songIdx);
     };
 
     MpdClient.deleteList = function (name) {
-        return this.exec("rm \"" + name + "\"");
+        return MpdClient.exec("rm \"" + name + "\"");
     };
 
     MpdClient.saveList = function (name) {
-        return this.deleteList(name).then(function (res) {
-            return this.exec("save \"" + name + "\"");
+        return MpdClient.deleteList(name).then(function (res) {
+            return MpdClient.exec("save \"" + name + "\"");
         });
     };
 
     MpdClient.lsinfo = function (dir) {
-        return this.exec("lsinfo \"" + dir + "\"");
+        return MpdClient.exec("lsinfo \"" + dir + "\"");
+    };
+
+    MpdClient.playAll = function (allPaths) {
+        if (allPaths.length == 0) {
+            return q.fcall(function () {
+                return "OK";
+            });
+        }
+
+        // Play first entry immediately, then add remaining, to avoid latence effect
+        return MpdClient.playEntry(allPaths[0]).then(function (res) {
+            return MpdClient.addAll(allPaths.slice(1));
+        });
+    };
+
+    MpdClient.addAll = function (allPaths) {
+        if (allPaths.length == 0) {
+            return q.fcall(function () {
+                return "OK";
+            });
+        }
+        return MpdClient.add(allPaths[0]).then(function (tmpResponse) {
+            return MpdClient.addAll(allPaths.slice(1));
+        });
+    };
+
+    MpdClient.update = function (uri) {
+        return MpdClient.exec("update \"" + uri + "\"");
     };
 
     MpdClient.custom = function (cmd) {
-        return this.exec(cmd);
+        return MpdClient.exec(cmd);
     };
     MpdClient.host = "localhost";
     MpdClient.port = 6600;

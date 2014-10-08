@@ -59,10 +59,24 @@ var LibLoader = (function () {
     LibLoader.progress = function (res) {
         res.send(new String(this.loadingCounter));
     };
+
+    LibLoader.lsInfo = function (dir, leafDescriptor) {
+        return MpdClient.lsinfo(dir).then(function (response) {
+            var lines = response.split("\n");
+            return q.fcall(function () {
+                return parseFlatDir(lines, leafDescriptor);
+            });
+        });
+    };
     LibLoader.loaded = false;
     LibLoader.loadingCounter = 0;
     return LibLoader;
 })();
+
+function splitOnce(str, separator) {
+    var i = str.indexOf(separator);
+    return { key: str.slice(0, i), value: str.slice(i + separator.length) };
+}
 
 function loadAllLib() {
     return loadDirForLib([], "").then(function (parser) {
@@ -108,46 +122,25 @@ Genre: Rock
 function parseNext(parser) {
     var currentSong = null;
     for (; parser.cursor < parser.lines.length; parser.cursor++) {
-        var elts = parser.lines[parser.cursor].split(": ");
-        var key = elts[0];
-        var value = elts[1];
-        if (key == "file") {
-            var currentSong = { "file": value };
+        var entry = splitOnce(parser.lines[parser.cursor], ": ");
+        var currentSong;
+        if (entry.key == "file") {
+            currentSong = { "file": entry.value };
             parser.songs.push(currentSong);
             LibLoader.loadingCounter++;
-        } else if (key == "directory") {
+        } else if (entry.key == "directory") {
             currentSong = null;
 
             // Load (async) the directory content, and then only continue on parsing what remains here
-            return loadDirForLib(parser.songs, value).then(function (subParser) {
+            return loadDirForLib(parser.songs, entry.value).then(function (subParser) {
                 // this "subParser" contains gathered songs, whereas the existing "parser" contains previous cursor information that we need to continue on this folder
                 return parseNext({ songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
             });
-        } else if (key == "playlist") {
+        } else if (entry.key == "playlist") {
             // skip
             currentSong = null;
         } else if (currentSong != null) {
-            if (key == "Last-Modified") {
-                currentSong.lastModified = value;
-            } else if (key == "Time") {
-                currentSong.time = +value;
-            } else if (key == "Artist") {
-                currentSong.artist = value;
-            } else if (key == "AlbumArtist") {
-                currentSong.albumArtist = value;
-            } else if (key == "Title") {
-                currentSong.title = value;
-            } else if (key == "Album") {
-                currentSong.album = value;
-            } else if (key == "Track") {
-                currentSong.track = value;
-            } else if (key == "Date") {
-                currentSong.date = value;
-            } else if (key == "Genre") {
-                currentSong.genre = value;
-            } else if (key == "Composer") {
-                currentSong.composer = value;
-            }
+            fillSongData(currentSong, entry.key, entry.value);
         }
     }
 
@@ -155,6 +148,55 @@ function parseNext(parser) {
     return q.fcall(function () {
         return parser;
     });
+}
+
+function parseFlatDir(lines, leafDescriptor) {
+    var currentSong = null;
+    var dirContent = [];
+    for (var i = 0; i < lines.length; i++) {
+        var entry = splitOnce(lines[i], ": ");
+        var currentSong;
+        if (entry.key == "file" || entry.key == "playlist") {
+            currentSong = { "file": entry.value };
+            dirContent.push(currentSong);
+        } else if (entry.key == "directory") {
+            currentSong = null;
+            dirContent.push({ directory: entry.value });
+        } else if (currentSong != null) {
+            fillSongData(currentSong, entry.key, entry.value);
+        }
+    }
+    return dirContent.map(function (inObj) {
+        var outObj = {};
+        leafDescriptor.forEach(function (key) {
+            outObj[key] = inObj[key];
+        });
+        return outObj;
+    });
+}
+
+function fillSongData(song, key, value) {
+    if (key == "Last-Modified") {
+        song.lastModified = value;
+    } else if (key == "Time") {
+        song.time = +value;
+    } else if (key == "Artist") {
+        song.artist = value;
+    } else if (key == "AlbumArtist") {
+        song.albumArtist = value;
+    } else if (key == "Title") {
+        song.title = value;
+    } else if (key == "Album") {
+        song.album = value;
+    } else if (key == "Track") {
+        song.track = value;
+    } else if (key == "Date") {
+        song.date = value;
+    } else if (key == "Genre") {
+        song.genre = value;
+    } else if (key == "Composer") {
+        song.composer = value;
+    }
 }
 
 // Returns a custom object tree corresponding to the descriptor

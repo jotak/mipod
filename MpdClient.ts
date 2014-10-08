@@ -67,91 +67,114 @@ class MpdClient {
     }
 
     static play(): q.Promise<string> {
-        return this.exec("play");
+        return MpdClient.exec("play");
     }
 
     static playEntry(path: string): q.Promise<string> {
-        return this.clear().then(function(res: string) {
-            return this.add(path);
-        }).then(this.play);
+        return MpdClient.clear().then(function(res: string) {
+            return MpdClient.add(path);
+        }).then(MpdClient.play);
     }
 
     static playIdx(idx: number): q.Promise<string> {
-        return this.exec("play " + idx);
+        return MpdClient.exec("play " + idx);
     }
 
     static pause(): q.Promise<string> {
-        return this.exec("pause");
+        return MpdClient.exec("pause");
     }
 
     static stop(): q.Promise<string> {
-        return this.exec("stop");
+        return MpdClient.exec("stop");
     }
 
     static prev(): q.Promise<string> {
-        return this.exec("previous");
+        return MpdClient.exec("previous");
     }
 
     static next(): q.Promise<string> {
-        return this.exec("next");
+        return MpdClient.exec("next");
     }
 
     static clear(): q.Promise<string> {
-        return this.exec("clear");
+        return MpdClient.exec("clear");
     }
 
     static add(uri: string): q.Promise<string> {
-        return this.exec("add " + uri);
+        return MpdClient.exec("add \"" + uri + "\"");
     }
 
     static load(playlist: string): q.Promise<string> {
-        return this.exec("load " + playlist);
+        return MpdClient.exec("load \"" + playlist + "\"");
     }
 
     static volume(value: string): q.Promise<string> {
-        return this.exec("setvol " + value);
+        return MpdClient.exec("setvol " + value);
     }
 
     static repeat(enabled: boolean): q.Promise<string> {
-        return this.exec("repeat " + (enabled ? "1" : "0"));
+        return MpdClient.exec("repeat " + (enabled ? "1" : "0"));
     }
 
     static random(enabled: boolean): q.Promise<string> {
-        return this.exec("random " + (enabled ? "1" : "0"));
+        return MpdClient.exec("random " + (enabled ? "1" : "0"));
     }
 
     static single(enabled: boolean): q.Promise<string> {
-        return this.exec("single " + (enabled ? "1" : "0"));
+        return MpdClient.exec("single " + (enabled ? "1" : "0"));
     }
 
     static consume(enabled: boolean): q.Promise<string> {
-        return this.exec("consume " + (enabled ? "1" : "0"));
+        return MpdClient.exec("consume " + (enabled ? "1" : "0"));
     }
 
     static seek(songIdx: number, posInSong: number): q.Promise<string> {
-        return this.exec("seek " + songIdx + " " + posInSong);
+        return MpdClient.exec("seek " + songIdx + " " + posInSong);
     }
 
     static removeFromQueue(songIdx: number): q.Promise<string> {
-        return this.exec("delete " + songIdx);
+        return MpdClient.exec("delete " + songIdx);
     }
 
     static deleteList(name: string): q.Promise<string> {
-        return this.exec("rm \"" + name + "\"");
+        return MpdClient.exec("rm \"" + name + "\"");
     }
 
     static saveList(name: string): q.Promise<string> {
-        return this.deleteList(name).then(function(res: string) {
-            return this.exec("save \"" + name + "\"");
+        return MpdClient.deleteList(name).then(function(res: string) {
+            return MpdClient.exec("save \"" + name + "\"");
         });
     }
 
     static lsinfo(dir: string): q.Promise<string> {
-        return this.exec("lsinfo \"" + dir + "\"");
+        return MpdClient.exec("lsinfo \"" + dir + "\"");
+    }
+
+    static playAll(allPaths: string[]): q.Promise<string> {
+        if (allPaths.length == 0) {
+            return q.fcall<string>(function() { return "OK"; });
+        }
+        // Play first entry immediately, then add remaining, to avoid latence effect
+        return MpdClient.playEntry(allPaths[0]).then(function(res: string) {
+            return MpdClient.addAll(allPaths.slice(1))
+        });
+    }
+
+    static addAll(allPaths: string[]): q.Promise<string> {
+        if (allPaths.length == 0) {
+            return q.fcall<string>(function() { return "OK"; });
+        }
+        return MpdClient.add(allPaths[0]).then(function(tmpResponse: string) {
+            return MpdClient.addAll(allPaths.slice(1));
+        });
+    }
+
+    static update(uri: string): q.Promise<string> {
+        return MpdClient.exec("update \"" + uri + "\"");
     }
 
     static custom(cmd: string): q.Promise<string> {
-        return this.exec(cmd);
+        return MpdClient.exec(cmd);
     }
 }
 export = MpdClient;

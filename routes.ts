@@ -38,21 +38,20 @@ export function register(app, mpdRoot: string, libRoot: string) {
         res.send("OK");
     });
 
-    app.get(mpdRoot + '/play/:path?', function(req, res) {
-        if (req.params.path) {
-            // Clear and add
-            answerOnPromise(MpdClient.playEntry(req.params.path), res);
-        } else {
-            answerOnPromise(MpdClient.play(), res);
-        }
+    app.get(mpdRoot + '/play', function(req, res) {
+        answerOnPromise(MpdClient.play(), res);
+    });
+
+    app.post(mpdRoot + '/play', function(req, res) {
+        answerOnPromise(MpdClient.playEntry(req.body.json), res);
     });
 
     app.get(mpdRoot + '/playidx/:idx', function(req, res) {
         answerOnPromise(MpdClient.playIdx(+req.params.idx), res);
     });
 
-    app.get(mpdRoot + '/add/:path', function(req, res) {
-        answerOnPromise(MpdClient.add(req.params.path), res);
+    app.post(mpdRoot + '/add', function(req, res) {
+        answerOnPromise(MpdClient.add(req.body.json), res);
     });
 
     app.get(mpdRoot + '/clear', function(req, res) {
@@ -115,6 +114,18 @@ export function register(app, mpdRoot: string, libRoot: string) {
         answerOnPromise(MpdClient.saveList(req.params.name), res);
     });
 
+    app.post(mpdRoot + '/playall', function(req, res) {
+        answerOnPromise(MpdClient.playAll(req.body.json), res);
+    });
+
+    app.post(mpdRoot + '/addall', function(req, res) {
+        answerOnPromise(MpdClient.addAll(req.body.json), res);
+    });
+
+    app.post(mpdRoot + '/update', function(req, res) {
+        answerOnPromise(MpdClient.update(req.body.json), res);
+    });
+
     app.get(mpdRoot + '/custom/:command', function(req, res) {
         answerOnPromise(MpdClient.custom(req.params.command), res);
     });
@@ -135,6 +146,13 @@ export function register(app, mpdRoot: string, libRoot: string) {
         var treeDesc: string = req.params.treeDesc || "genre,artist,album";
         var leafDesc: string = req.params.leafDesc || "file,track,title";
         LibLoader.getPage(res, +req.params.start, +req.params.count, treeDesc.split(","), leafDesc.split(","));
+    });
+
+    app.post(libRoot + '/lsinfo/:leafDesc?', function(req, res) {
+        var leafDesc: string = req.params.leafDesc || "file,directory,title,artist,album,time";
+        LibLoader.lsInfo(req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
+            res.send(lstContent);
+        });
     });
 
     app.get(mpdRoot, function(req, res) {

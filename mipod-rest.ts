@@ -20,12 +20,15 @@ SOFTWARE.
 
 /// <reference path="node/node.d.ts" />
 /// <reference path="express/express.d.ts" />
+/// <reference path="body-parser/body-parser.d.ts" />
 
 import express = require('express');
+import bodyParser = require('body-parser');
 import routes = require('./routes');
 
 "use strict";
 var app = express();
+app.use(bodyParser.json());
 var port: number = 8081;
 var mpdRestRoot: string = "/mpd";
 var libraryRestRoot: string = "/library";
