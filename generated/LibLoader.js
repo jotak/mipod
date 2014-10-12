@@ -209,8 +209,17 @@ function organizeJsonLib(flat, treeDescriptor, leafDescriptor) {
     flat.forEach(function (song) {
         var treePtr = tree;
         var depth = 1;
-        treeDescriptor.forEach(function (key) {
-            var valueForKey = song[key];
+
+        // strPossibleKeys can be like "albumArtist|artist", or just "album" for instance
+        treeDescriptor.forEach(function (strPossibleKeys) {
+            var possibleKeys = strPossibleKeys.split("|");
+            var valueForKey = undefined;
+            for (var key in possibleKeys) {
+                valueForKey = song[possibleKeys[key]];
+                if (valueForKey !== undefined && valueForKey !== "") {
+                    break;
+                }
+            }
             if (valueForKey === undefined) {
                 valueForKey = "";
             }

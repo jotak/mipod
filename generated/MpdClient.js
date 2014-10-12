@@ -29,10 +29,17 @@ var MpdClient = (function () {
         this.cmd = cmd + "\n";
         this.socket = net.createConnection(MpdClient.port, MpdClient.host);
         var that = this;
+        var response = "";
         this.socket.on('data', function (data) {
             if (that.ack) {
-                that.socket.destroy();
-                that.deferred.resolve(String(data).trim());
+                response += String(data);
+                if (response.indexOf("\nOK\n", response.length - 4) !== -1) {
+                    if (cmd === "lsinfo \"USB/Musiques/Idir - Identités\"") {
+                        console.log(response);
+                    }
+                    that.socket.destroy();
+                    that.deferred.resolve(response.trim());
+                }
             } else {
                 that.ack = true;
                 that.socket.write(that.cmd);
@@ -181,6 +188,14 @@ var MpdClient = (function () {
 
     MpdClient.update = function (uri) {
         return MpdClient.exec("update \"" + uri + "\"");
+    };
+
+    MpdClient.rate = function (uri, rate) {
+        return MpdClient.exec("sticker set song \"" + uri + "\" rating " + rate);
+    };
+
+    MpdClient.getRate = function (uri) {
+        return MpdClient.exec("sticker get song \"" + uri + "\" rating");
     };
 
     MpdClient.custom = function (cmd) {

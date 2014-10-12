@@ -124,6 +124,14 @@ function register(app, mpdRoot, libRoot) {
         answerOnPromise(MpdClient.update(req.body.json), res);
     });
 
+    app.post(mpdRoot + '/rate/:value?', function (req, res) {
+        if (req.params.value === undefined) {
+            answerOnPromise(MpdClient.getRate(req.body.json), res);
+        } else {
+            answerOnPromise(MpdClient.rate(req.body.json, req.params.value), res);
+        }
+    });
+
     app.get(mpdRoot + '/custom/:command', function (req, res) {
         answerOnPromise(MpdClient.custom(req.params.command), res);
     });
@@ -141,7 +149,7 @@ function register(app, mpdRoot, libRoot) {
     });
 
     app.get(libRoot + '/get/:start/:count/:treeDesc?/:leafDesc?', function (req, res) {
-        var treeDesc = req.params.treeDesc || "genre,artist,album";
+        var treeDesc = req.params.treeDesc || "genre,albumArtist|artist,album";
         var leafDesc = req.params.leafDesc || "file,track,title";
         LibLoader.getPage(res, +req.params.start, +req.params.count, treeDesc.split(","), leafDesc.split(","));
     });

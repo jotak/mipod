@@ -33,10 +33,14 @@ class MpdClient {
         this.cmd = cmd + "\n";
         this.socket = net.createConnection(MpdClient.port, MpdClient.host);
         var that = this;
+        var response: string = "";
         this.socket.on('data', function(data) {
             if (that.ack) {
-                that.socket.destroy();
-                that.deferred.resolve(String(data).trim());
+                response += String(data);
+                if (response.indexOf("\nOK\n", response.length - 4) !== -1) {
+                    that.socket.destroy();
+                    that.deferred.resolve(response.trim());
+                }
             } else {
                 that.ack = true;
                 that.socket.write(that.cmd);
@@ -185,6 +189,14 @@ class MpdClient {
 
     static update(uri: string): q.Promise<string> {
         return MpdClient.exec("update \"" + uri + "\"");
+    }
+
+    static rate(uri: string, rate: number): q.Promise<string> {
+        return MpdClient.exec("sticker set song \"" + uri + "\" rating " + rate);
+    }
+
+    static getRate(uri: string): q.Promise<string> {
+        return MpdClient.exec("sticker get song \"" + uri + "\" rating");
     }
 
     static custom(cmd: string): q.Promise<string> {
