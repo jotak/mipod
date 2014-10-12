@@ -29,7 +29,7 @@ class MpdClient {
     cmd: string;
     socket;
 
-    constructor(cmd: string) {
+    constructor(cmd: string, stopper?: string) {
         this.cmd = cmd + "\n";
         this.socket = net.createConnection(MpdClient.port, MpdClient.host);
         var that = this;
@@ -37,7 +37,7 @@ class MpdClient {
         this.socket.on('data', function(data) {
             if (that.ack) {
                 response += String(data);
-                if (response.indexOf("\nOK\n", response.length - 4) !== -1) {
+                if (!stopper || response.indexOf(stopper, response.length - stopper.length) !== -1) {
                     that.socket.destroy();
                     that.deferred.resolve(response.trim());
                 }
@@ -65,9 +65,9 @@ class MpdClient {
         this.port = port;
     }
 
-    private static exec(cmd: string): q.Promise<string> {
+    private static exec(cmd: string, stopper?: string): q.Promise<string> {
         console.log(cmd);
-        var mpd = new MpdClient(cmd);
+        var mpd = new MpdClient(cmd, stopper);
         return mpd.deferred.promise;
     }
 
@@ -165,7 +165,7 @@ class MpdClient {
     }
 
     static lsinfo(dir: string): q.Promise<string> {
-        return MpdClient.exec("lsinfo \"" + dir + "\"");
+        return MpdClient.exec("lsinfo \"" + dir + "\"", "\nOK\n");
     }
 
     static playAll(allPaths: string[]): q.Promise<string> {

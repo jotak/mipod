@@ -23,7 +23,7 @@ var q = require('q');
 
 "use strict";
 var MpdClient = (function () {
-    function MpdClient(cmd) {
+    function MpdClient(cmd, stopper) {
         this.ack = false;
         this.deferred = q.defer();
         this.cmd = cmd + "\n";
@@ -33,10 +33,7 @@ var MpdClient = (function () {
         this.socket.on('data', function (data) {
             if (that.ack) {
                 response += String(data);
-                if (response.indexOf("\nOK\n", response.length - 4) !== -1) {
-                    if (cmd === "lsinfo \"USB/Musiques/Idir - Identités\"") {
-                        console.log(response);
-                    }
+                if (!stopper || response.indexOf(stopper, response.length - stopper.length) !== -1) {
                     that.socket.destroy();
                     that.deferred.resolve(response.trim());
                 }
@@ -60,9 +57,9 @@ var MpdClient = (function () {
         this.port = port;
     };
 
-    MpdClient.exec = function (cmd) {
+    MpdClient.exec = function (cmd, stopper) {
         console.log(cmd);
-        var mpd = new MpdClient(cmd);
+        var mpd = new MpdClient(cmd, stopper);
         return mpd.deferred.promise;
     };
 
@@ -159,7 +156,7 @@ var MpdClient = (function () {
     };
 
     MpdClient.lsinfo = function (dir) {
-        return MpdClient.exec("lsinfo \"" + dir + "\"");
+        return MpdClient.exec("lsinfo \"" + dir + "\"", "\nOK\n");
     };
 
     MpdClient.playAll = function (allPaths) {
