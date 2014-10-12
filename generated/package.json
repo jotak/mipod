@@ -1,0 +1,53 @@
+{
+  "name": "mipod",
+  "version": "0.1.0",
+  "description": "Exposes a REST API for controlling a MPD server.",
+  "homepage": "https://github.com/jotak/mipod",
+  "author": "Joël Takvorian <joel.takvorian@qaraywa.net>",
+  "contributors": [{
+      "name": "Joël Takvorian",
+      "email": "joel.takvorian@qaraywa.net",
+      "url": "https://github.com/jotak"
+  }],
+//  "bin": {
+//      "module-name": "./bin/module-name"
+//  },
+//  "scripts": {
+//    "test": "vows --spec --isolate",
+//    "start": "node index.js",
+//    "predeploy": "echo im about to deploy",
+//    "postdeploy": "echo ive deployed",
+//    "prepublish": "coffee --bare --compile --output lib/foo src/foo/*.coffee"
+//  },
+  "main": "main.js",
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/jotak/mipod"
+  },
+  "bugs": {
+      "url": "https://github.com/jotak/mipod/issues"
+  },
+  "keywords": [
+      "MPD",
+      "REST",
+      "API"
+  ],
+  "dependencies": {
+    "express": "~4.9.0",
+    "body-parser": "~1.9.0",
+    "q": "~1.0.0"
+  },
+//  "devDependencies": {
+//    "vows": "^0.7.0",
+//    "assume": "<1.0.0 || >=2.3.1 <2.4.5 || >=2.5.2 <3.0.0",
+//    "pre-commit": "*"
+//  },
+  "preferGlobal": false,
+  "private": true,
+//  "publishConfig": {
+//      "registry": "https://your-private-hosted-npm.registry.nodejitsu.com"
+//  },
+  "subdomain": "mipod",
+  "analyze": true,
+  "license": "MIT"
+}

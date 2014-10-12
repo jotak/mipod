@@ -29,7 +29,7 @@ import routes = require('./routes');
 "use strict";
 var app = express();
 app.use(bodyParser.json());
-var port: number = 8081;
+var port: number = 80;
 var mpdRestRoot: string = "/mpd";
 var libraryRestRoot: string = "/library";
 
@@ -37,13 +37,13 @@ function usage() {
     console.log("Usage: node mipod-rest [options=values]");
     console.log("");
     console.log("Options:");
-    console.log("  -p, --port          setup server port (default 8081)");
+    console.log("  -p, --port          setup server port (default 80)");
     console.log("  -m, --mpdRoot       setup MPD-related root for REST requests (default /mpd)");
     console.log("  -l, --libraryRoot   setup library-related root for REST requests (default /library)");
     console.log("  -h, --help          this");
     console.log("");
     console.log("Example:");
-    console.log("  node mipod-rest -p=80 -m=/some/resource -l=/another/resource");
+    console.log("  node mipod-rest -p=81 -m=/some/resource -l=/another/resource");
     console.log("");
     console.log("More documentation available on https://github.com/jotak/mipod");
 }
