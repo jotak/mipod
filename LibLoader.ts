@@ -25,41 +25,45 @@ import q = require('q');
 "use strict";
 
 class LibLoader {
-    static loaded: boolean = false;
+    static allLoaded: boolean = false;
     static loadingCounter: number = 0;
-    static allSongs: SongInfo[];
+    static allSongs: SongInfo[] = [];
 
     static loadOnce(res) {
-        if (this.loaded) {
+        if (this.allLoaded) {
             // Already loaded, no need to load again.
             res.send({status: "OK", numberOfItems: this.loadingCounter});
+        } else if (this.loadingCounter > 0) {
+            // Already started to load => forbidden
+            res.status(403).send({status: "Already processing", numberOfItems: this.loadingCounter});
         } else {
             var that = this;
-            loadAllLib().then(function(json: SongInfo[]) {
-                that.allSongs = json;
-                that.loaded = true;
-                res.send({status: "OK", numberOfItems: that.loadingCounter});
+            loadAllLib(this.allSongs).then(function() {
+                that.allLoaded = true;
             }).done();
+            res.send({status: "OK"});
         }
     }
 
     static reload(res) {
-        this.loaded = false;
+        this.allLoaded = false;
         this.loadingCounter = 0;
-        this.allSongs = undefined;
+        this.allSongs = [];
         this.loadOnce(res);
     }
 
     static getPage(res, start: number, count: number, treeDescriptor: string[], leafDescriptor: string[]) {
-        if (this.loaded) {
-            var subTree: Tree = organizeJsonLib(
-                getSongsPage(this.allSongs, start, count),
-                treeDescriptor,
-                leafDescriptor);
-            res.send({status: "OK", data: subTree.root});
-        } else {
-            res.send({status: "Error: loading still in progress"}).end();
-        }
+        var end: number = Math.min(this.allSongs.length, start + count);
+        var subTree: Tree = organizeJsonLib(
+            getSongsPage(this.allSongs, start, end),
+            treeDescriptor,
+            leafDescriptor);
+        res.send({
+            status: "OK",
+            finished: (this.allLoaded && end === this.allSongs.length),
+            next: end,
+            data: subTree.root
+        });
     }
 
     static progress(res) {
@@ -116,11 +120,8 @@ function splitOnce(str: string, separator: string): KeyValue {
     }
 }
 
-function loadAllLib(): q.Promise<SongInfo[]> {
-    return loadDirForLib([], "")
-        .then(function(parser: ParserInfo) {
-            return parser.songs;
-        });
+function loadAllLib(songs: SongInfo[]): q.Promise<ParserInfo> {
+    return loadDirForLib(songs, "");
 }
 
 function loadDirForLib(songs: SongInfo[], dir: string): q.Promise<ParserInfo> {
@@ -277,8 +278,7 @@ function organizeJsonLib(flat: SongInfo[], treeDescriptor: string[], leafDescrip
     return {root: tree};
 }
 
-function getSongsPage(allSongs: SongInfo[], start: number, count: number): SongInfo[] {
-    var end: number = Math.min(allSongs.length, start + count);
+function getSongsPage(allSongs: SongInfo[], start: number, end: number): SongInfo[] {
     if (end > start) {
         return allSongs.slice(start, end);
     }

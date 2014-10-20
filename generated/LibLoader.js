@@ -27,33 +27,37 @@ var LibLoader = (function () {
     function LibLoader() {
     }
     LibLoader.loadOnce = function (res) {
-        if (this.loaded) {
+        if (this.allLoaded) {
             // Already loaded, no need to load again.
             res.send({ status: "OK", numberOfItems: this.loadingCounter });
+        } else if (this.loadingCounter > 0) {
+            // Already started to load => forbidden
+            res.status(403).send({ status: "Already processing", numberOfItems: this.loadingCounter });
         } else {
             var that = this;
-            loadAllLib().then(function (json) {
-                that.allSongs = json;
-                that.loaded = true;
-                res.send({ status: "OK", numberOfItems: that.loadingCounter });
+            loadAllLib(this.allSongs).then(function () {
+                that.allLoaded = true;
             }).done();
+            res.send({ status: "OK" });
         }
     };
 
     LibLoader.reload = function (res) {
-        this.loaded = false;
+        this.allLoaded = false;
         this.loadingCounter = 0;
-        this.allSongs = undefined;
+        this.allSongs = [];
         this.loadOnce(res);
     };
 
     LibLoader.getPage = function (res, start, count, treeDescriptor, leafDescriptor) {
-        if (this.loaded) {
-            var subTree = organizeJsonLib(getSongsPage(this.allSongs, start, count), treeDescriptor, leafDescriptor);
-            res.send({ status: "OK", data: subTree.root });
-        } else {
-            res.send({ status: "Error: loading still in progress" }).end();
-        }
+        var end = Math.min(this.allSongs.length, start + count);
+        var subTree = organizeJsonLib(getSongsPage(this.allSongs, start, end), treeDescriptor, leafDescriptor);
+        res.send({
+            status: "OK",
+            finished: (this.allLoaded && end === this.allSongs.length),
+            next: end,
+            data: subTree.root
+        });
     };
 
     LibLoader.progress = function (res) {
@@ -68,8 +72,9 @@ var LibLoader = (function () {
             });
         });
     };
-    LibLoader.loaded = false;
+    LibLoader.allLoaded = false;
     LibLoader.loadingCounter = 0;
+    LibLoader.allSongs = [];
     return LibLoader;
 })();
 
@@ -82,10 +87,8 @@ function splitOnce(str, separator) {
     }
 }
 
-function loadAllLib() {
-    return loadDirForLib([], "").then(function (parser) {
-        return parser.songs;
-    });
+function loadAllLib(songs) {
+    return loadDirForLib(songs, "");
 }
 
 function loadDirForLib(songs, dir) {
@@ -242,8 +245,7 @@ function organizeJsonLib(flat, treeDescriptor, leafDescriptor) {
     return { root: tree };
 }
 
-function getSongsPage(allSongs, start, count) {
-    var end = Math.min(allSongs.length, start + count);
+function getSongsPage(allSongs, start, end) {
     if (end > start) {
         return allSongs.slice(start, end);
     }
