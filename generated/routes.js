@@ -181,6 +181,12 @@ function register(app, mpdRoot, libRoot, library) {
         });
     });
 
+    httpPost(libRoot + '/tag/:tagName/:tagValue', function (req, res) {
+        var tagName = req.params.tagName;
+        var tagValue = req.params.tagValue;
+        answerOnPromise(library.writeTag(tagName, tagValue, req.body.targetType, req.body.target), res);
+    });
+
     app.get("/", function (req, res) {
         var resp = "Available resources: <br/><ul>";
         for (var i in routes) {

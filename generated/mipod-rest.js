@@ -32,6 +32,7 @@ var port = 80;
 var mpdRestRoot = "/mpd";
 var libraryRestRoot = "/library";
 var library = new LibLoader();
+var refreshOnStartup = false;
 
 function usage() {
     console.log("Usage: node mipod-rest [options=values]");
@@ -40,7 +41,8 @@ function usage() {
     console.log("  -p, --port          setup server port (default 80)");
     console.log("  -m, --mpdRoot       setup MPD-related root for REST requests (default /mpd)");
     console.log("  -l, --libraryRoot   setup library-related root for REST requests (default /library)");
-    console.log("  -c, --useLibCache   use given file for library cache");
+    console.log("  --useLibCache       use given file for library cache");
+    console.log("  --refreshOnStartup  load library from MPD on startup");
     console.log("  -h, --help          this");
     console.log("");
     console.log("Example:");
@@ -66,6 +68,9 @@ var mapParams = {
     "--useLibCache": function (val) {
         library.useCacheFile(val);
     },
+    "--refreshOnStartup": function (val) {
+        refreshOnStartup = true;
+    },
     "--help": function (val) {
         usage();
         process.exit(0);
@@ -75,7 +80,6 @@ var mapParams = {
 mapParams["-p"] = mapParams["--port"];
 mapParams["-m"] = mapParams["--mpdRoot"];
 mapParams["-l"] = mapParams["--libraryRoot"];
-mapParams["-c"] = mapParams["--useLibCache"];
 mapParams["-h"] = mapParams["--help"];
 
 process.argv.forEach(function (arg, index, array) {
@@ -101,5 +105,9 @@ process.argv.forEach(function (arg, index, array) {
 routes.register(app, mpdRestRoot, libraryRestRoot, library);
 
 app.listen(port);
+
+if (refreshOnStartup) {
+    library.forceRefresh();
+}
 
 console.log('Server running on port ' + port);

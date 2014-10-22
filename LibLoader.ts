@@ -20,9 +20,13 @@ SOFTWARE.
 
 /// <reference path="q/Q.d.ts" />
 import MpdClient = require('./MpdClient');
+import TagsMap = require('./libtypes/TagsMap');
+import ItemTags = require('./libtypes/ItemTags');
+import ThemeTags = require('./libtypes/ThemeTags');
 import CacheData = require('./libtypes/CacheData');
 import SongInfo = require('./libtypes/SongInfo');
 import LibCache = require('./LibCache');
+import tools = require('./tools');
 import q = require('q');
 
 "use strict";
@@ -62,7 +66,7 @@ class LibLoader {
         } else if (this.loadingCounter > 0) {
             // Already started to load => ignore
             return "Load in progress";
-        } else if (this.cacheFile != null) {
+        } else if (this.cacheFile !== null) {
             var that = this;
             LibCache.load(this.cacheFile).then(function(data: CacheData) {
                 that.libCache = data;
@@ -120,6 +124,33 @@ class LibLoader {
                     return that.parseFlatDir(lines, leafDescriptor);
                 });
             });
+    }
+
+    public writeTag(tagName: string, tagValue: string, targetType: string, target: string): q.Promise<string> {
+        if (!this.allLoaded) {
+            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
+        }
+        var tag: TagsMap = {};
+        var item: ItemTags = {};
+        var theme: ThemeTags = {};
+        tag[tagName] = tagValue;
+        item[target] = tag;
+        theme[targetType] = item;
+        tools.recursiveMerge(this.libCache.tags, theme);
+        if (this.cacheFile !== null) {
+            var deferred: q.Deferred<string> = q.defer<string>();
+            LibCache.save(this.cacheFile, this.libCache).then(function() {
+                deferred.resolve("Tag succesfully written");
+            }).fail(function(reason: Error) {
+                console.log("Cache not saved: " + reason.message);
+                deferred.reject(reason);
+            });
+            return deferred.promise;
+        } else {
+            return q.fcall<string>(function() {
+                return "Tag written in current instance only. You should provide a cache file in order to persist it.";
+            });
+        }
     }
 
     private loadAllLib() {
@@ -263,6 +294,7 @@ class LibLoader {
 
     // Returns a custom object tree corresponding to the descriptor
     private organizeJsonLib(flat: SongInfo[], treeDescriptor: string[], leafDescriptor: string[]): Tree {
+        var that = this;
         var tree = {};
         flat.forEach(function(song: SongInfo) {
             var treePtr: any = tree;
@@ -281,13 +313,17 @@ class LibLoader {
                     valueForKey = "";
                 }
                 if (!treePtr[valueForKey]) {
-                    if (depth == treeDescriptor.length) {
-                        treePtr[valueForKey] = [];
+                    if (depth === treeDescriptor.length) {
+                        treePtr[valueForKey] = {tags: {}, mpd: []};
                     } else {
-                        treePtr[valueForKey] = {};
+                        treePtr[valueForKey] = {tags: {}, mpd: {}};
+                    }
+                    var mostCommonKey: string = possibleKeys[possibleKeys.length-1];
+                    if (that.libCache.tags[mostCommonKey] && that.libCache.tags[mostCommonKey][valueForKey]) {
+                        treePtr[valueForKey].tags = that.libCache.tags[mostCommonKey][valueForKey];
                     }
                 }
-                treePtr = treePtr[valueForKey];
+                treePtr = treePtr[valueForKey].mpd;
                 depth++;
             });
             var leaf = {};

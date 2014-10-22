@@ -21,6 +21,7 @@ SOFTWARE.
 var MpdClient = require('./MpdClient');
 
 var LibCache = require('./LibCache');
+var tools = require('./tools');
 var q = require('q');
 
 "use strict";
@@ -100,6 +101,33 @@ var LibLoader = (function () {
                 return that.parseFlatDir(lines, leafDescriptor);
             });
         });
+    };
+
+    LibLoader.prototype.writeTag = function (tagName, tagValue, targetType, target) {
+        if (!this.allLoaded) {
+            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
+        }
+        var tag = {};
+        var item = {};
+        var theme = {};
+        tag[tagName] = tagValue;
+        item[target] = tag;
+        theme[targetType] = item;
+        tools.recursiveMerge(this.libCache.tags, theme);
+        if (this.cacheFile !== null) {
+            var deferred = q.defer();
+            LibCache.save(this.cacheFile, this.libCache).then(function () {
+                deferred.resolve("Tag succesfully written");
+            }).fail(function (reason) {
+                console.log("Cache not saved: " + reason.message);
+                deferred.reject(reason);
+            });
+            return deferred.promise;
+        } else {
+            return q.fcall(function () {
+                return "Tag written in current instance only. You should provide a cache file in order to persist it.";
+            });
+        }
     };
 
     LibLoader.prototype.loadAllLib = function () {
@@ -243,6 +271,7 @@ var LibLoader = (function () {
 
     // Returns a custom object tree corresponding to the descriptor
     LibLoader.prototype.organizeJsonLib = function (flat, treeDescriptor, leafDescriptor) {
+        var that = this;
         var tree = {};
         flat.forEach(function (song) {
             var treePtr = tree;
@@ -262,13 +291,17 @@ var LibLoader = (function () {
                     valueForKey = "";
                 }
                 if (!treePtr[valueForKey]) {
-                    if (depth == treeDescriptor.length) {
-                        treePtr[valueForKey] = [];
+                    if (depth === treeDescriptor.length) {
+                        treePtr[valueForKey] = { tags: {}, mpd: [] };
                     } else {
-                        treePtr[valueForKey] = {};
+                        treePtr[valueForKey] = { tags: {}, mpd: {} };
+                    }
+                    var mostCommonKey = possibleKeys[possibleKeys.length - 1];
+                    if (that.libCache.tags[mostCommonKey] && that.libCache.tags[mostCommonKey][valueForKey]) {
+                        treePtr[valueForKey].tags = that.libCache.tags[mostCommonKey][valueForKey];
                     }
                 }
-                treePtr = treePtr[valueForKey];
+                treePtr = treePtr[valueForKey].mpd;
                 depth++;
             });
             var leaf = {};
