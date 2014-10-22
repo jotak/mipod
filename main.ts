@@ -21,6 +21,7 @@ SOFTWARE.
 /// <reference path="node/node.d.ts" />
 
 import routes = require('./routes');
+import LibLoader = require('./LibLoader');
 
 "use strict";
 
@@ -29,10 +30,11 @@ interface RestRouteOptions {
     libPath?: string;
 }
 
-function listenRestRoutes(expressApp, options?: RestRouteOptions) {
+function listenRestRoutes(expressApp, options?: RestRouteOptions, library?: LibLoader) {
     var mpdRoot: string = (options && options.mpdPath) ? options.mpdPath : "/mpd";
     var libRoot: string = (options && options.libPath) ? options.libPath : "/library";
-    routes.register(expressApp, mpdRoot, libRoot);
+    var lib: LibLoader = library || new LibLoader();
+    routes.register(expressApp, mpdRoot, libRoot, lib);
 }
 
 module.exports = listenRestRoutes;

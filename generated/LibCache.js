@@ -18,16 +18,39 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 /// <reference path="node/node.d.ts" />
-var routes = require('./routes');
-var LibLoader = require('./LibLoader');
+/// <reference path="q/Q.d.ts" />
+var fs = require('fs');
+var q = require('q');
 
 "use strict";
 
-function listenRestRoutes(expressApp, options, library) {
-    var mpdRoot = (options && options.mpdPath) ? options.mpdPath : "/mpd";
-    var libRoot = (options && options.libPath) ? options.libPath : "/library";
-    var lib = library || new LibLoader();
-    routes.register(expressApp, mpdRoot, libRoot, lib);
-}
+var LibCache = (function () {
+    function LibCache() {
+    }
+    LibCache.load = function (filepath) {
+        var deferred = q.defer();
+        fs.readFile(filepath, { encoding: "utf8" }, function (err, data) {
+            if (err) {
+                deferred.reject(err);
+            } else {
+                var jsonContent = eval('(' + data + ')');
+                deferred.resolve(jsonContent);
+            }
+        });
+        return deferred.promise;
+    };
 
-module.exports = listenRestRoutes;
+    LibCache.save = function (filepath, data) {
+        var deferred = q.defer();
+        fs.writeFile(filepath, JSON.stringify(data), function (err) {
+            if (err) {
+                deferred.reject(new Error(err.code));
+            } else {
+                deferred.resolve("OK");
+            }
+        });
+        return deferred.promise;
+    };
+    return LibCache;
+})();
+module.exports = LibCache;

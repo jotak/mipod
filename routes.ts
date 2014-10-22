@@ -34,208 +34,125 @@ function answerOnPromise(promise: q.Promise<string>, httpResponse: any) {
 interface RouteInfo {
     path: string;
     description?: string;
-    func: (req: any, res: any) => void;
     verb: string;
 }
 
 "use strict";
-export function register(app, mpdRoot: string, libRoot: string) {
+export function register(app, mpdRoot: string, libRoot: string, library: LibLoader) {
 
-    var allRoutes: RouteInfo[] = [{
-        verb: "GET",
-        path: mpdRoot + '/configure/:host/:port',
-        func: function(req, res) {
-            MpdClient.configure(req.params.host, +req.params.port);
-            res.send("OK");
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/play',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.play(), res);
-        }
-    }, {
-        verb: "POST",
-        path: mpdRoot + '/play',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.playEntry(req.body.json), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/playidx/:idx',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.playIdx(+req.params.idx), res);
-        }
-    }, {
-        verb: "POST",
-        path: mpdRoot + '/add',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.add(req.body.json), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/clear',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.clear(), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/pause',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.pause(), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/stop',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.stop(), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/next',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.next(), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/prev',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.prev(), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/load/:path',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.load(req.params.path), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/volume/:value',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.volume(req.params.value), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/repeat/:enabled',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.repeat(req.params.enabled === "1"), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/random/:enabled',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.random(req.params.enabled === "1"), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '/single/:enabled',
-        func: function(req, res) {
-            answerOnPromise(MpdClient.single(req.params.enabled === "1"), res);
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '',
-        func: function(req, res) {
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '',
-        func: function(req, res) {
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '',
-        func: function(req, res) {
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '',
-        func: function(req, res) {
-        }
-    }, {
-        verb: "GET",
-        path: mpdRoot + '',
-        func: function(req, res) {
-        }
-    }];
+    var routes: RouteInfo[] = [];
 
-    app.post(mpdRoot + '/add', function(req, res) {
+    var httpGet = function(path: string, clbk, description?: string) {
+        app.get(path, clbk);
+        routes.push({path: path, description: description, verb: "GET"});
+    }
+    var httpPost = function(path: string, clbk, description?: string) {
+        app.post(path, clbk);
+        routes.push({path: path, description: description, verb: "POST"});
+    }
+    var httpPut = function(path: string, clbk, description?: string) {
+        app.put(path, clbk);
+        routes.push({path: path, description: description, verb: "PUT"});
+    }
+    var httpDelete = function(path: string, clbk, description?: string) {
+        app.delete(path, clbk);
+        routes.push({path: path, description: description, verb: "DELETE"});
+    }
+
+    httpGet(mpdRoot + '/configure/:host/:port', function(req, res) {
+        MpdClient.configure(req.params.host, +req.params.port);
+        res.send("OK");
+    });
+
+    httpGet(mpdRoot + '/play', function(req, res) {
+        answerOnPromise(MpdClient.play(), res);
+    });
+
+    httpPost(mpdRoot + '/play', function(req, res) {
+        answerOnPromise(MpdClient.playEntry(req.body.json), res);
+    });
+
+    httpGet(mpdRoot + '/playidx/:idx', function(req, res) {
+        answerOnPromise(MpdClient.playIdx(+req.params.idx), res);
+    });
+
+    httpPost(mpdRoot + '/add', function(req, res) {
         answerOnPromise(MpdClient.add(req.body.json), res);
     });
 
-    app.get(mpdRoot + '/clear', function(req, res) {
+    httpGet(mpdRoot + '/clear', function(req, res) {
         answerOnPromise(MpdClient.clear(), res);
     });
 
-    app.get(mpdRoot + '/pause', function(req, res) {
+    httpGet(mpdRoot + '/pause', function(req, res) {
         answerOnPromise(MpdClient.pause(), res);
     });
 
-    app.get(mpdRoot + '/stop', function(req, res) {
+    httpGet(mpdRoot + '/stop', function(req, res) {
         answerOnPromise(MpdClient.stop(), res);
     });
 
-    app.get(mpdRoot + '/next', function(req, res) {
+    httpGet(mpdRoot + '/next', function(req, res) {
         answerOnPromise(MpdClient.next(), res);
     });
 
-    app.get(mpdRoot + '/prev', function(req, res) {
+    httpGet(mpdRoot + '/prev', function(req, res) {
         answerOnPromise(MpdClient.prev(), res);
     });
 
-    app.get(mpdRoot + '/load/:path', function(req, res) {
+    httpGet(mpdRoot + '/load/:path', function(req, res) {
         answerOnPromise(MpdClient.load(req.params.path), res);
     });
 
-    app.get(mpdRoot + '/volume/:value', function(req, res) {
+    httpGet(mpdRoot + '/volume/:value', function(req, res) {
         answerOnPromise(MpdClient.volume(req.params.value), res);
     });
 
-    app.get(mpdRoot + '/repeat/:enabled', function(req, res) {
+    httpGet(mpdRoot + '/repeat/:enabled', function(req, res) {
         answerOnPromise(MpdClient.repeat(req.params.enabled === "1"), res);
     });
 
-    app.get(mpdRoot + '/random/:enabled', function(req, res) {
+    httpGet(mpdRoot + '/random/:enabled', function(req, res) {
         answerOnPromise(MpdClient.random(req.params.enabled === "1"), res);
     });
 
-    app.get(mpdRoot + '/single/:enabled', function(req, res) {
+    httpGet(mpdRoot + '/single/:enabled', function(req, res) {
         answerOnPromise(MpdClient.single(req.params.enabled === "1"), res);
     });
 
-    app.get(mpdRoot + '/consume/:enabled', function(req, res) {
+    httpGet(mpdRoot + '/consume/:enabled', function(req, res) {
         answerOnPromise(MpdClient.consume(req.params.enabled === "1"), res);
     });
 
-    app.get(mpdRoot + '/seek/:songIdx/:posInSong', function(req, res) {
+    httpGet(mpdRoot + '/seek/:songIdx/:posInSong', function(req, res) {
         answerOnPromise(MpdClient.seek(+req.params.songIdx, +req.params.posInSong), res);
     });
 
-    app.get(mpdRoot + '/rmqueue/:songIdx', function(req, res) {
+    httpGet(mpdRoot + '/rmqueue/:songIdx', function(req, res) {
         answerOnPromise(MpdClient.removeFromQueue(+req.params.songIdx), res);
     });
 
-    app.get(mpdRoot + '/deletelist/:name', function(req, res) {
+    httpGet(mpdRoot + '/deletelist/:name', function(req, res) {
         answerOnPromise(MpdClient.deleteList(req.params.name), res);
     });
 
-    app.get(mpdRoot + '/savelist/:name', function(req, res) {
+    httpGet(mpdRoot + '/savelist/:name', function(req, res) {
         answerOnPromise(MpdClient.saveList(req.params.name), res);
     });
 
-    app.post(mpdRoot + '/playall', function(req, res) {
+    httpPost(mpdRoot + '/playall', function(req, res) {
         answerOnPromise(MpdClient.playAll(req.body.json), res);
     });
 
-    app.post(mpdRoot + '/addall', function(req, res) {
+    httpPost(mpdRoot + '/addall', function(req, res) {
         answerOnPromise(MpdClient.addAll(req.body.json), res);
     });
 
-    app.post(mpdRoot + '/update', function(req, res) {
+    httpPost(mpdRoot + '/update', function(req, res) {
         answerOnPromise(MpdClient.update(req.body.json), res);
     });
 
-    app.post(mpdRoot + '/rate/:value?', function(req, res) {
+    httpPost(mpdRoot + '/rate/:value?', function(req, res) {
         if (req.params.value === undefined) {
             answerOnPromise(MpdClient.getRate(req.body.json), res);
         } else {
@@ -243,63 +160,44 @@ export function register(app, mpdRoot: string, libRoot: string) {
         }
     });
 
-    app.get(mpdRoot + '/custom/:command', function(req, res) {
+    httpGet(mpdRoot + '/custom/:command', function(req, res) {
         answerOnPromise(MpdClient.custom(req.params.command), res);
     });
 
-    app.get(libRoot + '/loadonce', function(req, res) {
-        LibLoader.loadOnce(res);
+    httpGet(libRoot + '/loadonce', function(req, res) {
+        var status: string = library.loadOnce();
+        res.send({status: status});
     });
 
-    app.get(libRoot + '/reload', function(req, res) {
-        LibLoader.reload(res);
+    httpGet(libRoot + '/reload', function(req, res) {
+        var status: string = library.forceRefresh();
+        res.send({status: status});
     });
 
-    app.get(libRoot + '/progress', function(req, res) {
-        LibLoader.progress(res);
+    httpGet(libRoot + '/progress', function(req, res) {
+        library.progress(res);
     });
 
-    app.get(libRoot + '/get/:start/:count/:treeDesc?/:leafDesc?', function(req, res) {
+    httpGet(libRoot + '/get/:start/:count/:treeDesc?/:leafDesc?', function(req, res) {
         var treeDesc: string = req.params.treeDesc || "genre,albumArtist|artist,album";
         var leafDesc: string = req.params.leafDesc || "file,track,title";
-        LibLoader.getPage(res, +req.params.start, +req.params.count, treeDesc.split(","), leafDesc.split(","));
+        library.getPage(res, +req.params.start, +req.params.count, treeDesc.split(","), leafDesc.split(","));
     });
 
-    app.post(libRoot + '/lsinfo/:leafDesc?', function(req, res) {
+    httpPost(libRoot + '/lsinfo/:leafDesc?', function(req, res) {
         var leafDesc: string = req.params.leafDesc || "file,directory,title,artist,album,time";
-        LibLoader.lsInfo(req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
+        library.lsInfo(req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
             res.send(lstContent);
         });
     });
 
-    app.get(mpdRoot, function(req, res) {
-        res.send("Available resources on " + mpdRoot + " are: <br/><ul>"
-        + "<li>" + mpdRoot + "/configure/:host/:port</li>"
-        + "<li>" + mpdRoot + "/play/:path?</li>"
-        + "<li>" + mpdRoot + "/playidx/:idx</li>"
-        + "<li>" + mpdRoot + "/add/:path</li>"
-        + "<li>" + mpdRoot + "/clear</li>"
-        + "<li>" + mpdRoot + "/pause</li>"
-        + "<li>" + mpdRoot + "/stop</li>"
-        + "<li>" + mpdRoot + "/next</li>"
-        + "<li>" + mpdRoot + "/prev</li>"
-        + "<li>" + mpdRoot + "/load/:path</li>"
-        + "<li>" + mpdRoot + "/volume/:value</li>"
-        + "<li>" + mpdRoot + "/repeat/:enabled</li>"
-        + "<li>" + mpdRoot + "/random/:enabled</li>"
-        + "<li>" + mpdRoot + "/single/:enabled</li>"
-        + "<li>" + mpdRoot + "/consume/:enabled</li>"
-        + "<li>" + mpdRoot + "/seek/:songIdx/:posInSong</li>"
-        + "<li>" + mpdRoot + "/custom/:command</li>"
-        + "</ul>Check documentation on <a href='https://github.com/jotak/mipod'>https://github.com/jotak/mipod</a>");
-    });
-
-    app.get(libRoot, function(req, res) {
-        res.send("Available resources on " + libRoot + " are: <br/><ul>"
-        + "<li>" + libRoot + "/loadonce</li>"
-        + "<li>" + libRoot + "/reload</li>"
-        + "<li>" + libRoot + "/progress</li>"
-        + "<li>" + libRoot + "/get/:start/:count/:treeDesc?/:leafDesc?</li>"
-        + "</ul>Check documentation on <a href='https://github.com/jotak/mipod'>https://github.com/jotak/mipod</a>");
+    app.get("/", function(req, res) {
+        var resp: string = "Available resources: <br/><ul>";
+        for (var i in routes) {
+            var route: RouteInfo = routes[i];
+            resp += "<li>" + route.verb + " " + route.path + (route.description ? " <i>" + route.description + "</i>" : "") + "</li>";
+        }
+        resp += "</ul>Check documentation on <a href='https://github.com/jotak/mipod'>https://github.com/jotak/mipod</a>";
+        res.send(resp);
     });
 }
