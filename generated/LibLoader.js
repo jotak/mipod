@@ -19,6 +19,7 @@ SOFTWARE.
 */
 /// <reference path="q/Q.d.ts" />
 var MpdClient = require('./MpdClient');
+
 var q = require('q');
 
 "use strict";

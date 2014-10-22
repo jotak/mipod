@@ -20,6 +20,8 @@ SOFTWARE.
 
 /// <reference path="q/Q.d.ts" />
 import MpdClient = require('./MpdClient');
+import SongInfo = require('./libtypes/SongInfo');
+import LibCache = require('./LibCache');
 import q = require('q');
 
 "use strict";
@@ -84,20 +86,6 @@ export = LibLoader;
 
 interface Tree {
     root: any;
-}
-
-interface SongInfo {
-    file: string;
-    lastModified?: string;
-    time?: number;
-    artist?: string;
-    albumArtist?: string;
-    title?: string;
-    album?: string;
-    track?: string;
-    date?: string;
-    genre?: string;
-    composer?: string;
 }
 
 interface ParserInfo {

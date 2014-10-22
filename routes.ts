@@ -31,25 +31,133 @@ function answerOnPromise(promise: q.Promise<string>, httpResponse: any) {
     }).done();
 }
 
+interface RouteInfo {
+    path: string;
+    description?: string;
+    func: (req: any, res: any) => void;
+    verb: string;
+}
+
 "use strict";
 export function register(app, mpdRoot: string, libRoot: string) {
 
-    app.get(mpdRoot + '/configure/:host/:port', function(req, res) {
-        MpdClient.configure(req.params.host, +req.params.port);
-        res.send("OK");
-    });
-
-    app.get(mpdRoot + '/play', function(req, res) {
-        answerOnPromise(MpdClient.play(), res);
-    });
-
-    app.post(mpdRoot + '/play', function(req, res) {
-        answerOnPromise(MpdClient.playEntry(req.body.json), res);
-    });
-
-    app.get(mpdRoot + '/playidx/:idx', function(req, res) {
-        answerOnPromise(MpdClient.playIdx(+req.params.idx), res);
-    });
+    var allRoutes: RouteInfo[] = [{
+        verb: "GET",
+        path: mpdRoot + '/configure/:host/:port',
+        func: function(req, res) {
+            MpdClient.configure(req.params.host, +req.params.port);
+            res.send("OK");
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/play',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.play(), res);
+        }
+    }, {
+        verb: "POST",
+        path: mpdRoot + '/play',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.playEntry(req.body.json), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/playidx/:idx',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.playIdx(+req.params.idx), res);
+        }
+    }, {
+        verb: "POST",
+        path: mpdRoot + '/add',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.add(req.body.json), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/clear',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.clear(), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/pause',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.pause(), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/stop',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.stop(), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/next',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.next(), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/prev',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.prev(), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/load/:path',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.load(req.params.path), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/volume/:value',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.volume(req.params.value), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/repeat/:enabled',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.repeat(req.params.enabled === "1"), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/random/:enabled',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.random(req.params.enabled === "1"), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '/single/:enabled',
+        func: function(req, res) {
+            answerOnPromise(MpdClient.single(req.params.enabled === "1"), res);
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '',
+        func: function(req, res) {
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '',
+        func: function(req, res) {
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '',
+        func: function(req, res) {
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '',
+        func: function(req, res) {
+        }
+    }, {
+        verb: "GET",
+        path: mpdRoot + '',
+        func: function(req, res) {
+        }
+    }];
 
     app.post(mpdRoot + '/add', function(req, res) {
         answerOnPromise(MpdClient.add(req.body.json), res);
