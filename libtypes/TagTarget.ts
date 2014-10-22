@@ -18,26 +18,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/// <reference path="node/node.d.ts" />
-
-import routes = require('./routes');
-import LibLoader = require('./LibLoader');
-
 "use strict";
 
-interface RestRouteOptions {
-    mpdPath?: string;
-    libPath?: string;
+interface TagTarget {
+    targetType: string;
+    target: string;
 }
 
-function listenRestRoutes(expressApp, libCachePath?: string, options?: RestRouteOptions) {
-    var mpdRoot: string = (options && options.mpdPath) ? options.mpdPath : "/mpd";
-    var libRoot: string = (options && options.libPath) ? options.libPath : "/library";
-    var lib: LibLoader = new LibLoader();
-    if (libCachePath) {
-        lib.useCacheFile(libCachePath);
-    }
-    routes.register(expressApp, mpdRoot, libRoot, lib);
-}
-
-module.exports = listenRestRoutes;
+export = TagTarget;

@@ -23,10 +23,13 @@ var LibLoader = require('./LibLoader');
 
 "use strict";
 
-function listenRestRoutes(expressApp, options, library) {
+function listenRestRoutes(expressApp, libCachePath, options) {
     var mpdRoot = (options && options.mpdPath) ? options.mpdPath : "/mpd";
     var libRoot = (options && options.libPath) ? options.libPath : "/library";
-    var lib = library || new LibLoader();
+    var lib = new LibLoader();
+    if (libCachePath) {
+        lib.useCacheFile(libCachePath);
+    }
     routes.register(expressApp, mpdRoot, libRoot, lib);
 }
 

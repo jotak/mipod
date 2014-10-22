@@ -18,17 +18,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/// <reference path="type-check/type-check.d.ts" />
+
 import LibLoader = require('./LibLoader');
 import MpdClient = require('./MpdClient');
 import q = require('q');
+import typeCheck = require('type-check');
 
-function answerOnPromise(promise: q.Promise<string>, httpResponse: any) {
-    promise.then(function(mpdResponse: string) {
-        httpResponse.send(mpdResponse);
+function answerOnPromise(promise: q.Promise<any>, httpResponse: any) {
+    promise.then(function(answer: any) {
+        httpResponse.send(answer);
     }).fail(function(reason: Error) {
         console.log("Application error: " + reason.message);
         httpResponse.status(500).send(String(reason));
     }).done();
+}
+
+function check(typeDesc: string, obj: any, httpResponse: any) {
+    if (!typeCheck.typeCheck(typeDesc, obj)) {
+        httpResponse.status(400).send("Malformed json, expecting: " + typeDesc);
+        return false;
+    }
+    return true;
 }
 
 interface RouteInfo {
@@ -69,7 +80,9 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
     });
 
     httpPost(mpdRoot + '/play', function(req, res) {
-        answerOnPromise(MpdClient.playEntry(req.body.json), res);
+        if (check("{json: String}", req.body, res)) {
+            answerOnPromise(MpdClient.playEntry(req.body.json), res);
+        }
     });
 
     httpGet(mpdRoot + '/playidx/:idx', function(req, res) {
@@ -77,7 +90,9 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
     });
 
     httpPost(mpdRoot + '/add', function(req, res) {
-        answerOnPromise(MpdClient.add(req.body.json), res);
+        if (check("{json: String}", req.body, res)) {
+            answerOnPromise(MpdClient.add(req.body.json), res);
+        }
     });
 
     httpGet(mpdRoot + '/clear', function(req, res) {
@@ -141,22 +156,20 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
     });
 
     httpPost(mpdRoot + '/playall', function(req, res) {
-        answerOnPromise(MpdClient.playAll(req.body.json), res);
+        if (check("{json: [String]}", req.body, res)) {
+            answerOnPromise(MpdClient.playAll(req.body.json), res);
+        }
     });
 
     httpPost(mpdRoot + '/addall', function(req, res) {
-        answerOnPromise(MpdClient.addAll(req.body.json), res);
+        if (check("{json: [String]}", req.body, res)) {
+            answerOnPromise(MpdClient.addAll(req.body.json), res);
+        }
     });
 
     httpPost(mpdRoot + '/update', function(req, res) {
-        answerOnPromise(MpdClient.update(req.body.json), res);
-    });
-
-    httpPost(mpdRoot + '/rate/:value?', function(req, res) {
-        if (req.params.value === undefined) {
-            answerOnPromise(MpdClient.getRate(req.body.json), res);
-        } else {
-            answerOnPromise(MpdClient.rate(req.body.json, req.params.value), res);
+        if (check("{json: String}", req.body, res)) {
+            answerOnPromise(MpdClient.update(req.body.json), res);
         }
     });
 
@@ -186,9 +199,23 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
 
     httpPost(libRoot + '/lsinfo/:leafDesc?', function(req, res) {
         var leafDesc: string = req.params.leafDesc || "file,directory,title,artist,album,time";
-        library.lsInfo(req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
-            res.send(lstContent);
-        });
+        if (check("{json: String}", req.body, res)) {
+            library.lsInfo(req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
+                res.send(lstContent);
+            });
+        }
+    });
+
+    httpPost(libRoot + '/tag/:tagName/:tagValue?', function(req, res) {
+        var tagName: string = req.params.tagName;
+        var tagValue: string = req.params.tagValue;
+        if (check("{targets: [{targetType: String, target: String}]}", req.body, res)) {
+            if (tagValue === undefined) {
+                answerOnPromise(library.readTag(tagName, req.body.targets), res);
+            } else {
+                answerOnPromise(library.writeTag(tagName, tagValue, req.body.targets), res);
+            }
+        }
     });
 
     httpPost(libRoot + '/tag/:tagName/:tagValue', function(req, res) {

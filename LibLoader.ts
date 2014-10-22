@@ -25,6 +25,7 @@ import ItemTags = require('./libtypes/ItemTags');
 import ThemeTags = require('./libtypes/ThemeTags');
 import CacheData = require('./libtypes/CacheData');
 import SongInfo = require('./libtypes/SongInfo');
+import TagTarget = require('./libtypes/TagTarget');
 import LibCache = require('./LibCache');
 import tools = require('./tools');
 import q = require('q');
@@ -126,17 +127,44 @@ class LibLoader {
             });
     }
 
-    public writeTag(tagName: string, tagValue: string, targetType: string, target: string): q.Promise<string> {
+    public readTag(tagName: string, targets: TagTarget[]): q.Promise<ThemeTags> {
+        if (!this.allLoaded) {
+            throw new Error("Tag reading service is unavailable until the library is fully loaded.");
+        }
+        var returnTags: ThemeTags = {};
+        for (var i = 0; i < targets.length; i++) {
+            var targetType: string = targets[i].targetType;
+            var target: string = targets[i].target;
+            if (this.libCache.tags[targetType] !== undefined
+                    && this.libCache.tags[targetType][target] !== undefined
+                    && this.libCache.tags[targetType][target][tagName] !== undefined) {
+                var tag: TagsMap = {};
+                var item: ItemTags = {};
+                var theme: ThemeTags = {};
+                tag[tagName] = this.libCache.tags[targetType][target][tagName];
+                item[target] = tag;
+                theme[targetType] = item;
+                tools.recursiveMerge(returnTags, theme);
+            }
+        }
+        return q.fcall<ThemeTags>(function() {
+            return returnTags;
+        });
+    }
+
+    public writeTag(tagName: string, tagValue: string, targets: TagTarget[]): q.Promise<string> {
         if (!this.allLoaded) {
             throw new Error("Tag writing service is unavailable until the library is fully loaded.");
         }
-        var tag: TagsMap = {};
-        var item: ItemTags = {};
-        var theme: ThemeTags = {};
-        tag[tagName] = tagValue;
-        item[target] = tag;
-        theme[targetType] = item;
-        tools.recursiveMerge(this.libCache.tags, theme);
+        for (var i = 0; i < targets.length; i++) {
+            var tag: TagsMap = {};
+            var item: ItemTags = {};
+            var theme: ThemeTags = {};
+            tag[tagName] = tagValue;
+            item[targets[i].target] = tag;
+            theme[targets[i].targetType] = item;
+            tools.recursiveMerge(this.libCache.tags, theme);
+        }
         if (this.cacheFile !== null) {
             var deferred: q.Deferred<string> = q.defer<string>();
             LibCache.save(this.cacheFile, this.libCache).then(function() {

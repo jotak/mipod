@@ -19,13 +19,23 @@ SOFTWARE.
 */
 var MpdClient = require('./MpdClient');
 
+var typeCheck = require('type-check');
+
 function answerOnPromise(promise, httpResponse) {
-    promise.then(function (mpdResponse) {
-        httpResponse.send(mpdResponse);
+    promise.then(function (answer) {
+        httpResponse.send(answer);
     }).fail(function (reason) {
         console.log("Application error: " + reason.message);
         httpResponse.status(500).send(String(reason));
     }).done();
+}
+
+function check(typeDesc, obj, httpResponse) {
+    if (!typeCheck.typeCheck(typeDesc, obj)) {
+        httpResponse.status(400).send("Malformed json, expecting: " + typeDesc);
+        return false;
+    }
+    return true;
 }
 
 "use strict";
@@ -59,7 +69,9 @@ function register(app, mpdRoot, libRoot, library) {
     });
 
     httpPost(mpdRoot + '/play', function (req, res) {
-        answerOnPromise(MpdClient.playEntry(req.body.json), res);
+        if (check("{json: String}", req.body, res)) {
+            answerOnPromise(MpdClient.playEntry(req.body.json), res);
+        }
     });
 
     httpGet(mpdRoot + '/playidx/:idx', function (req, res) {
@@ -67,7 +79,9 @@ function register(app, mpdRoot, libRoot, library) {
     });
 
     httpPost(mpdRoot + '/add', function (req, res) {
-        answerOnPromise(MpdClient.add(req.body.json), res);
+        if (check("{json: String}", req.body, res)) {
+            answerOnPromise(MpdClient.add(req.body.json), res);
+        }
     });
 
     httpGet(mpdRoot + '/clear', function (req, res) {
@@ -131,22 +145,20 @@ function register(app, mpdRoot, libRoot, library) {
     });
 
     httpPost(mpdRoot + '/playall', function (req, res) {
-        answerOnPromise(MpdClient.playAll(req.body.json), res);
+        if (check("{json: [String]}", req.body, res)) {
+            answerOnPromise(MpdClient.playAll(req.body.json), res);
+        }
     });
 
     httpPost(mpdRoot + '/addall', function (req, res) {
-        answerOnPromise(MpdClient.addAll(req.body.json), res);
+        if (check("{json: [String]}", req.body, res)) {
+            answerOnPromise(MpdClient.addAll(req.body.json), res);
+        }
     });
 
     httpPost(mpdRoot + '/update', function (req, res) {
-        answerOnPromise(MpdClient.update(req.body.json), res);
-    });
-
-    httpPost(mpdRoot + '/rate/:value?', function (req, res) {
-        if (req.params.value === undefined) {
-            answerOnPromise(MpdClient.getRate(req.body.json), res);
-        } else {
-            answerOnPromise(MpdClient.rate(req.body.json, req.params.value), res);
+        if (check("{json: String}", req.body, res)) {
+            answerOnPromise(MpdClient.update(req.body.json), res);
         }
     });
 
@@ -176,9 +188,23 @@ function register(app, mpdRoot, libRoot, library) {
 
     httpPost(libRoot + '/lsinfo/:leafDesc?', function (req, res) {
         var leafDesc = req.params.leafDesc || "file,directory,title,artist,album,time";
-        library.lsInfo(req.body.json, leafDesc.split(",")).then(function (lstContent) {
-            res.send(lstContent);
-        });
+        if (check("{json: String}", req.body, res)) {
+            library.lsInfo(req.body.json, leafDesc.split(",")).then(function (lstContent) {
+                res.send(lstContent);
+            });
+        }
+    });
+
+    httpPost(libRoot + '/tag/:tagName/:tagValue?', function (req, res) {
+        var tagName = req.params.tagName;
+        var tagValue = req.params.tagValue;
+        if (check("{targets: [{targetType: String, target: String}]}", req.body, res)) {
+            if (tagValue === undefined) {
+                answerOnPromise(library.readTag(tagName, req.body.targets), res);
+            } else {
+                answerOnPromise(library.writeTag(tagName, tagValue, req.body.targets), res);
+            }
+        }
     });
 
     httpPost(libRoot + '/tag/:tagName/:tagValue', function (req, res) {

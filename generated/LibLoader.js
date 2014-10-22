@@ -47,7 +47,7 @@ var LibLoader = (function () {
         } else if (this.loadingCounter > 0) {
             // Already started to load => ignore
             return "Load in progress";
-        } else if (this.cacheFile != null) {
+        } else if (this.cacheFile !== null) {
             var that = this;
             LibCache.load(this.cacheFile).then(function (data) {
                 that.libCache = data;
@@ -103,17 +103,42 @@ var LibLoader = (function () {
         });
     };
 
-    LibLoader.prototype.writeTag = function (tagName, tagValue, targetType, target) {
+    LibLoader.prototype.readTag = function (tagName, targets) {
         if (!this.allLoaded) {
             throw new Error("Tag writing service is unavailable until the library is fully loaded.");
         }
-        var tag = {};
-        var item = {};
-        var theme = {};
-        tag[tagName] = tagValue;
-        item[target] = tag;
-        theme[targetType] = item;
-        tools.recursiveMerge(this.libCache.tags, theme);
+        var returnTags = {};
+        for (var i = 0; i < targets.length; i++) {
+            var targetType = targets[i].targetType;
+            var target = targets[i].target;
+            if (this.libCache.tags[targetType] !== undefined && this.libCache.tags[targetType][target] !== undefined && this.libCache.tags[targetType][target][tagName] !== undefined) {
+                var tag = {};
+                var item = {};
+                var theme = {};
+                tag[tagName] = this.libCache.tags[targetType][target][tagName];
+                item[target] = tag;
+                theme[targetType] = item;
+                tools.recursiveMerge(returnTags, theme);
+            }
+        }
+        return q.fcall(function () {
+            return returnTags;
+        });
+    };
+
+    LibLoader.prototype.writeTag = function (tagName, tagValue, targets) {
+        if (!this.allLoaded) {
+            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
+        }
+        for (var i = 0; i < targets.length; i++) {
+            var tag = {};
+            var item = {};
+            var theme = {};
+            tag[tagName] = tagValue;
+            item[targets[i].target] = tag;
+            theme[targets[i].targetType] = item;
+            tools.recursiveMerge(this.libCache.tags, theme);
+        }
         if (this.cacheFile !== null) {
             var deferred = q.defer();
             LibCache.save(this.cacheFile, this.libCache).then(function () {
