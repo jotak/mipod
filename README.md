@@ -12,11 +12,11 @@ It also provides more advanced library management, still through REST resources.
 
 1. Stand-alone
 As a stand-alone server, you only need the javascript files under directory '''generated'''. Copy them to the place you want, and run mipod-rest.js with node:
-* *node mipod-rest.js*
+  * *node mipod-rest.js*
 That's all you need to start the server with default parameters. It will listen to requests on port 80 and connects to a MPD server on localhost:6600. Try out http://localhost/mpd/play or http://localhost/mpd/pause, if you have an MPD server running, you should hear immediate results.
 
 Configurable options are:
-* -p=X, --port=X : setup server port (default 80)
-* 
+  * -p=X, --port=X : setup server port (default 80)
+  * 
 
 WIP...
