@@ -105,7 +105,7 @@ var LibLoader = (function () {
 
     LibLoader.prototype.readTag = function (tagName, targets) {
         if (!this.allLoaded) {
-            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
+            throw new Error("Tag reading service is unavailable until the library is fully loaded.");
         }
         var returnTags = {};
         for (var i = 0; i < targets.length; i++) {
