@@ -11,12 +11,26 @@ It also provides more advanced library management, still through REST resources.
 ## Usage
 
 1. Stand-alone
-As a stand-alone server, you only need the javascript files under directory '''generated'''. Copy them to the place you want, and run mipod-rest.js with node:
+  As a stand-alone server, you only need the javascript files under directory '''generated'''. Copy them to the place you want, and run mipod-rest.js with node:
   * *node mipod-rest.js*
-That's all you need to start the server with default parameters. It will listen to requests on port 80 and connects to a MPD server on localhost:6600. Try out http://localhost/mpd/play or http://localhost/mpd/pause, if you have an MPD server running, you should hear immediate results.
+  
+  That's all you need to start the server with default parameters. It will listen to requests on port 80 and connects to a MPD server on localhost:6600. Try out http://localhost/mpd/play or http://localhost/mpd/pause, if you have an MPD server running, you should hear immediate results.
 
-Configurable options are:
-  * -p=X, --port=X : setup server port (default 80)
-  * 
+  Configurable options are:
+  * **-p=$X, --port=$X** setup server port (default 80)
+  * **-m=$path, --mpdRoot=$path** setup MPD-related root for REST requests (default /mpd)
+  * **-l=$path, --libraryRoot=$path** setup library-related root for REST requests (default /library). You can eventually choose the same as mpdRoot.
+  * **--useLibCache=$filename** use given file for library cache (see dedicated section below for more information).
+  * **--refreshOnStartup** load the whole library from MPD on startup and refresh its cache.
+  * **-h, --help** help
 
-WIP...
+2. Node module inclusion
+  You can download sources from github. Since mipod is written in [typescript](http://www.typescriptlang.org/), you may want to benefit from this and import it in your own typescript code:
+  * **import mipod = require('path/to/mipod/main');**
+  or do the equivalent in javascript:
+  * **var mipod = require('path/to/mipod/main.js');**
+  
+  Then, register routes by calling:
+  * **mipod(app)** (app is your own ''express'' application)
+
+WIP
