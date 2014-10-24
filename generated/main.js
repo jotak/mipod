@@ -49,6 +49,5 @@ function listenRestRoutes(expressApp, options) {
     }
     routes.register(expressApp, opts.mpdRestPath, opts.libRestPath, lib);
 }
-exports.listenRestRoutes = listenRestRoutes;
 
-module.exports = exports.listenRestRoutes;
+module.exports = listenRestRoutes;

@@ -118,7 +118,7 @@ process.argv.forEach(function(arg: string, index: number, array) {
     }
 });
 
-mipod.listenRestRoutes(app, opts);
+mipod(app, opts);
 
 app.listen(port);
 

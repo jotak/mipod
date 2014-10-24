@@ -29,7 +29,7 @@ import typeCheck = require('type-check');
 
 "use strict";
 
-export function listenRestRoutes(expressApp: any, options?: O.IOptions) {
+function listenRestRoutes(expressApp: any, options?: O.IOptions) {
     var opts: O.IOptions = options ? tools.extend(options, O.Options.default()) : O.Options.default();
 
     // Since this module can be imported from JS applications (non-typescript), we'll add some runtime type-check on Options
@@ -52,4 +52,4 @@ export function listenRestRoutes(expressApp: any, options?: O.IOptions) {
     routes.register(expressApp, opts.mpdRestPath, opts.libRestPath, lib);
 }
 
-module.exports = listenRestRoutes;
+export = listenRestRoutes;
