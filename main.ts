@@ -21,23 +21,25 @@ SOFTWARE.
 /// <reference path="node/node.d.ts" />
 
 import routes = require('./routes');
+import tools = require('./tools');
 import LibLoader = require('./LibLoader');
+import MpdClient = require('./MpdClient');
+import O = require('./Options');
 
 "use strict";
 
-interface RestRouteOptions {
-    mpdPath?: string;
-    libPath?: string;
-}
-
-function listenRestRoutes(expressApp, libCachePath?: string, options?: RestRouteOptions) {
-    var mpdRoot: string = (options && options.mpdPath) ? options.mpdPath : "/mpd";
-    var libRoot: string = (options && options.libPath) ? options.libPath : "/library";
+export function listenRestRoutes(expressApp: any, options?: O.IOptions) {
+    var opts: O.IOptions = options ? tools.extend(options, O.Options.default()) : O.Options.default();
+    MpdClient.configure(opts.mpdHost, opts.mpdPort);
     var lib: LibLoader = new LibLoader();
-    if (libCachePath) {
-        lib.useCacheFile(libCachePath);
+    lib.setDataPath(opts.dataPath);
+    if (opts.useLibCache) {
+        lib.setUseCacheFile(true);
     }
-    routes.register(expressApp, mpdRoot, libRoot, lib);
+    if (opts.loadLibOnStartup) {
+        lib.forceRefresh();
+    }
+    routes.register(expressApp, opts.mpdRestPath, opts.libRestPath, lib);
 }
 
 module.exports = listenRestRoutes;

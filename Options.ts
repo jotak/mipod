@@ -18,40 +18,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/**
-* Overrides content of 'receiver' with 'provider'
-*/
-export function override<T>(receiver: T, provider: T) {
-    for (var prop in provider) {
-        if ({}.hasOwnProperty.call(provider, prop)) {
-            if ({}.hasOwnProperty.call(receiver, prop)) {
-                if (typeof provider[prop] === 'object') {
-                    this.override(receiver[prop], provider[prop]);
-                } else {
-                    receiver[prop] = provider[prop];
-                }
-            } else {
-                receiver[prop] = provider[prop];
-            }
-        }
-    }
-    return receiver;
-}
+"use strict";
 
-/**
-* Extend missing content of 'receiver' with 'provider'
-*/
-export function extend<T>(receiver: T, provider: T) {
-    for (var prop in provider) {
-        if ({}.hasOwnProperty.call(provider, prop)) {
-            if ({}.hasOwnProperty.call(receiver, prop)) {
-                if (typeof provider[prop] === 'object') {
-                    this.extend(receiver[prop], provider[prop]);
-                }
-            } else {
-                receiver[prop] = provider[prop];
-            }
+module Options {
+    export interface IOptions {
+        dataPath?: string;
+        useLibCache?: boolean;
+        mpdRestPath?: string;
+        libRestPath?: string;
+        loadLibOnStartup?: boolean;
+        mpdHost?: string;
+        mpdPort?: number;
+    }
+
+    export class Options implements IOptions {
+        constructor(public dataPath: string,
+                    public useLibCache: boolean,
+                    public mpdRestPath: string,
+                    public libRestPath: string,
+                    public loadLibOnStartup: boolean,
+                    public mpdHost: string,
+                    public mpdPort: number) {
+        }
+        static default(): IOptions {
+            return new Options("data", true, "/mpd", "/library", false, "localhost", 6600);
         }
     }
-    return receiver;
 }
+export = Options

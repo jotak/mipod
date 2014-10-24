@@ -24,28 +24,29 @@ SOFTWARE.
 
 import express = require('express');
 import bodyParser = require('body-parser');
-import routes = require('./routes');
+import mipod = require('./main');
 import LibLoader = require('./LibLoader');
+import O = require('./Options');
 
 "use strict";
 var app = express();
 app.use(bodyParser.json());
+var opts: O.IOptions = O.Options.default();
 var port: number = 80;
-var mpdRestRoot: string = "/mpd";
-var libraryRestRoot: string = "/library";
-var library: LibLoader = new LibLoader();
-var refreshOnStartup: boolean = false;
 
 function usage() {
     console.log("Usage: node mipod-rest [options=values]");
     console.log("");
     console.log("Options:");
-    console.log("  -p, --port          setup server port (default 80)");
-    console.log("  -m, --mpdRoot       setup MPD-related root for REST requests (default /mpd)");
-    console.log("  -l, --libraryRoot   setup library-related root for REST requests (default /library)");
-    console.log("  --useLibCache       use given file for library cache");
-    console.log("  --refreshOnStartup  load library from MPD on startup");
-    console.log("  -h, --help          this");
+    console.log("  -p=$X, --port=$X                setup server port (default 80)");
+    console.log("  -m=$path, --mpdRoot=$path       setup MPD-related root for REST requests (default /mpd)");
+    console.log("  -l=$path, --libraryRoot=$path   setup library-related root for REST requests (default /library)");
+    console.log("  --mpdHost=$host                 MPD server hostname (default localhost)");
+    console.log("  --mpdPort=$X                    MPD server port (default 6600)");
+    console.log("  --dataPath=$path                local path where data files will be stored");
+    console.log("  --dontUseLibCache               deactivate MPD caching (will be slower, but saves memory)");
+    console.log("  --loadLibOnStartup              load library from MPD on startup");
+    console.log("  -h, --help                      this");
     console.log("");
     console.log("Example:");
     console.log("  node mipod-rest -p=81 -m=/some/resource -l=/another/resource");
@@ -62,16 +63,29 @@ var mapParams: { [key: string]: (val: string) => void; } = {
         }
     },
     "--mpdRoot": function(val: string) {
-        mpdRestRoot = val;
+        opts.mpdRestPath = val;
     },
     "--libraryRoot": function(val: string) {
-        libraryRestRoot = val;
+        opts.libRestPath = val;
     },
-    "--useLibCache": function(val: string) {
-        library.useCacheFile(val);
+    "--mpdHost": function(val: string) {
+        opts.mpdHost = val;
     },
-    "--refreshOnStartup": function(val: string) {
-        refreshOnStartup = true;
+    "--mpdPort": function(val: string) {
+        opts.mpdPort = +val;
+        if (isNaN(opts.mpdPort)) {
+            console.log("Invalid MPD port");
+            process.exit(0);
+        }
+    },
+    "--dataPath": function(val: string) {
+        opts.dataPath = val;
+    },
+    "--dontUseLibCache": function(val: string) {
+        opts.useLibCache = false;
+    },
+    "--loadLibOnStartup": function(val: string) {
+        opts.loadLibOnStartup = true;
     },
     "--help": function(val: string) {
         usage();
@@ -104,12 +118,8 @@ process.argv.forEach(function(arg: string, index: number, array) {
     }
 });
 
-routes.register(app, mpdRestRoot, libraryRestRoot, library);
+mipod.listenRestRoutes(app, opts);
 
 app.listen(port);
-
-if (refreshOnStartup) {
-    library.forceRefresh();
-}
 
 console.log('Server running on port ' + port);

@@ -22,26 +22,52 @@ SOFTWARE.
 /// <reference path="q/Q.d.ts" />
 import fs = require('fs');
 import q = require('q');
-import CacheData = require('./libtypes/CacheData');
+import SongInfo = require('./libtypes/SongInfo');
+import ThemeTags = require('./libtypes/ThemeTags');
 
 "use strict";
 
 class LibCache {
 
-    static load(filepath: string): q.Promise<CacheData> {
-        var deferred: q.Deferred<CacheData> = q.defer<CacheData>();
+    static loadCache(filepath: string): q.Promise<SongInfo[]> {
+        var deferred: q.Deferred<SongInfo[]> = q.defer<SongInfo[]>();
         fs.readFile(filepath, {encoding: "utf8"}, function(err, data) {
             if (err) {
                 deferred.reject(err);
             } else {
-                var jsonContent: CacheData = eval('(' + data + ')');
+                var jsonContent: SongInfo[] = eval('(' + data + ')');
                 deferred.resolve(jsonContent);
             }
         });
         return deferred.promise;
     }
 
-    static save(filepath: string, data: CacheData): q.Promise<string> {
+    static saveCache(filepath: string, data: SongInfo[]): q.Promise<string> {
+        var deferred: q.Deferred<string> = q.defer<string>();
+        fs.writeFile(filepath, JSON.stringify(data), function(err) {
+            if (err) {
+                deferred.reject(new Error(err.code));
+            } else {
+                deferred.resolve("OK");
+            }
+        });
+        return deferred.promise;
+    }
+
+    static loadTags(filepath: string): q.Promise<ThemeTags> {
+        var deferred: q.Deferred<ThemeTags> = q.defer<ThemeTags>();
+        fs.readFile(filepath, {encoding: "utf8"}, function(err, data) {
+            if (err) {
+                deferred.reject(err);
+            } else {
+                var jsonContent: ThemeTags = eval('(' + data + ')');
+                deferred.resolve(jsonContent);
+            }
+        });
+        return deferred.promise;
+    }
+
+    static saveTags(filepath: string, data: ThemeTags): q.Promise<string> {
         var deferred: q.Deferred<string> = q.defer<string>();
         fs.writeFile(filepath, JSON.stringify(data), function(err) {
             if (err) {

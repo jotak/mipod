@@ -27,7 +27,7 @@ var q = require('q');
 var LibCache = (function () {
     function LibCache() {
     }
-    LibCache.load = function (filepath) {
+    LibCache.loadCache = function (filepath) {
         var deferred = q.defer();
         fs.readFile(filepath, { encoding: "utf8" }, function (err, data) {
             if (err) {
@@ -40,7 +40,32 @@ var LibCache = (function () {
         return deferred.promise;
     };
 
-    LibCache.save = function (filepath, data) {
+    LibCache.saveCache = function (filepath, data) {
+        var deferred = q.defer();
+        fs.writeFile(filepath, JSON.stringify(data), function (err) {
+            if (err) {
+                deferred.reject(new Error(err.code));
+            } else {
+                deferred.resolve("OK");
+            }
+        });
+        return deferred.promise;
+    };
+
+    LibCache.loadTags = function (filepath) {
+        var deferred = q.defer();
+        fs.readFile(filepath, { encoding: "utf8" }, function (err, data) {
+            if (err) {
+                deferred.reject(err);
+            } else {
+                var jsonContent = eval('(' + data + ')');
+                deferred.resolve(jsonContent);
+            }
+        });
+        return deferred.promise;
+    };
+
+    LibCache.saveTags = function (filepath, data) {
         var deferred = q.defer();
         fs.writeFile(filepath, JSON.stringify(data), function (err) {
             if (err) {

@@ -17,12 +17,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-function recursiveMerge(receiver, provider) {
+/**
+* Overrides content of 'receiver' with 'provider'
+*/
+function override(receiver, provider) {
     for (var prop in provider) {
         if ({}.hasOwnProperty.call(provider, prop)) {
             if ({}.hasOwnProperty.call(receiver, prop)) {
                 if (typeof provider[prop] === 'object') {
-                    this.recursiveMerge(receiver[prop], provider[prop]);
+                    this.override(receiver[prop], provider[prop]);
                 } else {
                     receiver[prop] = provider[prop];
                 }
@@ -31,5 +34,25 @@ function recursiveMerge(receiver, provider) {
             }
         }
     }
+    return receiver;
 }
-exports.recursiveMerge = recursiveMerge;
+exports.override = override;
+
+/**
+* Extend missing content of 'receiver' with 'provider'
+*/
+function extend(receiver, provider) {
+    for (var prop in provider) {
+        if ({}.hasOwnProperty.call(provider, prop)) {
+            if ({}.hasOwnProperty.call(receiver, prop)) {
+                if (typeof provider[prop] === 'object') {
+                    this.extend(receiver[prop], provider[prop]);
+                }
+            } else {
+                receiver[prop] = provider[prop];
+            }
+        }
+    }
+    return receiver;
+}
+exports.extend = extend;

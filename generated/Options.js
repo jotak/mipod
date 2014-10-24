@@ -17,13 +17,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
 "use strict";
-import SongInfo = require('./SongInfo');
-import ThemeTags = require('./ThemeTags');
-
-interface CacheData {
-    mpdContent: SongInfo[];
-    tags: ThemeTags;
-}
-export = CacheData;
+var Options;
+(function (_Options) {
+    var Options = (function () {
+        function Options(dataPath, useLibCache, mpdRestPath, libRestPath, loadLibOnStartup, mpdHost, mpdPort) {
+            this.dataPath = dataPath;
+            this.useLibCache = useLibCache;
+            this.mpdRestPath = mpdRestPath;
+            this.libRestPath = libRestPath;
+            this.loadLibOnStartup = loadLibOnStartup;
+            this.mpdHost = mpdHost;
+            this.mpdPort = mpdPort;
+        }
+        Options.default = function () {
+            return new Options("data", true, "/mpd", "/library", false, "localhost", 6600);
+        };
+        return Options;
+    })();
+    _Options.Options = Options;
+})(Options || (Options = {}));
+module.exports = Options;
