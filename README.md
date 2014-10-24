@@ -20,8 +20,11 @@ It also provides more advanced library management, still through REST resources.
   * **-p=$X, --port=$X** setup server port (default 80)
   * **-m=$path, --mpdRoot=$path** setup MPD-related root for REST requests (default /mpd)
   * **-l=$path, --libraryRoot=$path** setup library-related root for REST requests (default /library). You can eventually choose the same as mpdRoot.
-  * **--useLibCache=$filename** use given file for library cache (see dedicated section below for more information).
-  * **--refreshOnStartup** load the whole library from MPD on startup and refresh its cache.
+  * **--mpdHost=$host** MPD server hostname (default localhost)
+  * **--mpdPort=$X** MPD server port (default 6600)
+  * **--dataPath=$path** local path where data files will be stored
+  * **--dontUseLibCache** deactivate MPD caching (will be slower, but saves memory - see dedicated section below for more information).
+  * **--loadLibOnStartup** load the whole library from MPD on startup and refresh its cache.
   * **-h, --help** help
 
 2. Node module inclusion
@@ -31,6 +34,15 @@ It also provides more advanced library management, still through REST resources.
   * **var mipod = require('path/to/mipod/main.js');**
   
   Then, register routes by calling:
-  * **mipod(app)** (app is your own ''express'' application)
+  * **mipod(app, opts)** app is your own ''express'' application, opts is a set of options equivalent to the ones described above (typescript: interface IOptions from Options.ts):
+    * dataPath: string
+    * useLibCache: boolean
+    * mpdRestPath: string
+    * libRestPath: string
+    * loadLibOnStartup: boolean
+    * mpdHost: string
+    * mpdPort: number
+
+## Routes
 
 WIP
