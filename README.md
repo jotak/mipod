@@ -3,6 +3,7 @@ mipod
 
 A nodejs module for exposing a REST API for the Music Player Daemon (MPD). Written in Typescript, it generates ready-to-use Javascript.
 Javascript + node package lies in folder [javascript](https://github.com/jotak/mipod/tree/master/javascript)
+
 It can be used either as a nodejs dependency module or as a stand-alone server.
 
 mipod provides basic MPD commands exposed as REST resources, such as *'GET /mpd/play'*.
@@ -31,6 +32,7 @@ It also provides more advanced library management, still through REST resources.
 2. Node module inclusion
   You can download sources from github. Since mipod is written in [typescript](http://www.typescriptlang.org/), you may want to benefit from this and import it in your own typescript code:
   * **import mipod = require('path/to/mipod/main');**
+
   or do the equivalent in javascript:
   * **var mipod = require('path/to/mipod/main.js');**
   
@@ -108,4 +110,5 @@ It also provides more advanced library management, still through REST resources.
     * Get (if tagValue undefined) or set (if tagValue defined) a custom tag associated to a given target.
     * Expecting POST data: "targetType" refers to a MPD tag (song, artist, album etc.). "target" depends on "targetType": for a song, will be the MPD path for instance.
 
-WIP
+## License
+Copyright 2014 Joël Takvorian, [MIT License](https://github.com/jotak/mipod/blob/master/LICENSE)
