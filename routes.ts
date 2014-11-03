@@ -70,11 +70,6 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
         routes.push({path: path, description: description, verb: "DELETE"});
     }
 
-    httpGet(mpdRoot + '/configure/:host/:port', function(req, res) {
-        MpdClient.configure(req.params.host, +req.params.port);
-        res.send("OK");
-    });
-
     httpGet(mpdRoot + '/play', function(req, res) {
         answerOnPromise(MpdClient.play(), res);
     });
@@ -113,10 +108,6 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
 
     httpGet(mpdRoot + '/prev', function(req, res) {
         answerOnPromise(MpdClient.prev(), res);
-    });
-
-    httpGet(mpdRoot + '/load/:path', function(req, res) {
-        answerOnPromise(MpdClient.load(req.params.path), res);
     });
 
     httpGet(mpdRoot + '/volume/:value', function(req, res) {

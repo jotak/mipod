@@ -122,10 +122,6 @@ class MpdClient {
         });
     }
 
-    static load(playlist: string): q.Promise<string> {
-        return MpdClient.exec("load \"" + playlist + "\"");
-    }
-
     static volume(value: string): q.Promise<string> {
         return MpdClient.exec("setvol " + value);
     }

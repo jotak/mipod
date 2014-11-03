@@ -1,7 +1,8 @@
 mipod
 ======
 
-A nodejs module for exposing an MPD REST API. Written in Typescript, javascript is ready to use.
+A nodejs module for exposing a REST API for the Music Player Daemon (MPD). Written in Typescript, it generates ready-to-use Javascript.
+Javascript + node package lies in folder [generated](https://github.com/jotak/mipod/tree/master/generated)
 It can be used either as a nodejs dependency module or as a stand-alone server.
 
 mipod provides basic MPD commands exposed as REST resources, such as *'GET /mpd/play'*.
@@ -62,8 +63,6 @@ It also provides more advanced library management, still through REST resources.
     * Next song in playlist
 * GET /mpd/prev
     * Previous song in playlist
-* GET /mpd/load/:path
-    * DEPRECATED Load a playlist (use POST "add" or "play" instead)
 * GET /mpd/volume/:value
     * Set the volume (from 0 to 100)
 * GET /mpd/repeat/:enabled
@@ -79,7 +78,7 @@ It also provides more advanced library management, still through REST resources.
 * GET /mpd/rmqueue/:songIdx
     * Remove song from its index in current playlist
 * GET /mpd/deletelist/:name
-    * Delete file (DEPRECATED, todo: use POST and rename resource as it's any file)
+    * Delete saved playlist
 * GET /mpd/savelist/:name
     * Save current playlist with given file name
 * POST {json: [String]} /mpd/playall

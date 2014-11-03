@@ -113,10 +113,6 @@ var MpdClient = (function () {
         });
     };
 
-    MpdClient.load = function (playlist) {
-        return MpdClient.exec("load \"" + playlist + "\"");
-    };
-
     MpdClient.volume = function (value) {
         return MpdClient.exec("setvol " + value);
     };
