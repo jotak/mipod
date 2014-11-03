@@ -105,8 +105,8 @@ It also provides more advanced library management, still through REST resources.
     * "leafDesc" is a descriptor of tags to include in leaves, that is, most commonly, songs. By default it is "file,track,title".
 * POST {json: String} /library/lsinfo/:leafDesc?
     * An equivalent method of the above that returns only a flat reprensentation of a given path.
-* POST /library/tag/:tagName/:tagValue?
+* POST {targets: [{targetType: String, target: String}]} /library/tag/:tagName/:tagValue?
     * Get (if tagValue undefined) or set (if tagValue defined) a custom tag associated to a given target.
-    * Expecting POST data: {targets: [{targetType: String, target: String}]}. "targetType" refers to a MPD tag (song, artist, album etc.). "target" depends on "targetType": for a song, will be the MPD path for instance.
+    * Expecting POST data: "targetType" refers to a MPD tag (song, artist, album etc.). "target" depends on "targetType": for a song, will be the MPD path for instance.
 
 WIP
