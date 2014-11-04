@@ -21,6 +21,8 @@ SOFTWARE.
 /// <reference path="q/Q.d.ts" />
 import net = require('net');
 import q = require('q');
+import MpdEntry = require('./libtypes/MpdEntry');
+import SongInfo = require('./libtypes/SongInfo');
 
 "use strict";
 class MpdClient {
@@ -193,6 +195,10 @@ class MpdClient {
 
     static getRate(uri: string): q.Promise<string> {
         return MpdClient.exec("sticker get song \"" + uri + "\" rating");
+    }
+
+    static current(): q.Promise<string> {
+        return MpdClient.exec("currentsong");
     }
 
     static custom(cmd: string): q.Promise<string> {

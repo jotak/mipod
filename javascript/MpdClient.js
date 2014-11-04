@@ -191,6 +191,10 @@ var MpdClient = (function () {
         return MpdClient.exec("sticker get song \"" + uri + "\" rating");
     };
 
+    MpdClient.current = function () {
+        return MpdClient.exec("currentsong");
+    };
+
     MpdClient.custom = function (cmd) {
         return MpdClient.exec(cmd);
     };

@@ -20,6 +20,7 @@ SOFTWARE.
 /// <reference path="q/Q.d.ts" />
 var MpdClient = require('./MpdClient');
 
+var MpdEntries = require('./MpdEntries');
 var LibCache = require('./LibCache');
 var tools = require('./tools');
 var q = require('q');
@@ -108,9 +109,8 @@ var LibLoader = (function () {
     LibLoader.prototype.lsInfo = function (dir, leafDescriptor) {
         var that = this;
         return MpdClient.lsinfo(dir).then(function (response) {
-            var lines = response.split("\n");
             return q.fcall(function () {
-                return that.parseFlatDir(lines, leafDescriptor);
+                return that.parseFlatDir(response, leafDescriptor);
             });
         });
     };
@@ -181,15 +181,6 @@ var LibLoader = (function () {
         }).done();
     };
 
-    LibLoader.prototype.splitOnce = function (str, separator) {
-        var i = str.indexOf(separator);
-        if (i >= 0) {
-            return { key: str.slice(0, i), value: str.slice(i + separator.length) };
-        } else {
-            return { key: "", value: str.slice(i + separator.length) };
-        }
-    };
-
     LibLoader.prototype.loadDirForLib = function (songs, dir) {
         var that = this;
         return MpdClient.lsinfo(dir).then(function (response) {
@@ -231,7 +222,7 @@ var LibLoader = (function () {
         var that = this;
         var currentSong = null;
         for (; parser.cursor < parser.lines.length; parser.cursor++) {
-            var entry = this.splitOnce(parser.lines[parser.cursor], ": ");
+            var entry = tools.splitOnce(parser.lines[parser.cursor], ": ");
             var currentSong;
             if (entry.key == "file") {
                 currentSong = { "file": entry.value };
@@ -249,7 +240,7 @@ var LibLoader = (function () {
                 // skip
                 currentSong = null;
             } else if (currentSong != null) {
-                this.fillSongData(currentSong, entry.key, entry.value);
+                MpdEntries.setSongField(currentSong, entry.key, entry.value);
             }
         }
 
@@ -259,53 +250,26 @@ var LibLoader = (function () {
         });
     };
 
-    LibLoader.prototype.parseFlatDir = function (lines, leafDescriptor) {
-        var currentSong = null;
-        var dirContent = [];
-        for (var i = 0; i < lines.length; i++) {
-            var entry = this.splitOnce(lines[i], ": ");
-            var currentSong;
-            if (entry.key == "file" || entry.key == "playlist") {
-                currentSong = { "file": entry.value };
-                dirContent.push(currentSong);
-            } else if (entry.key == "directory") {
-                currentSong = null;
-                dirContent.push({ directory: entry.value });
-            } else if (currentSong != null) {
-                this.fillSongData(currentSong, entry.key, entry.value);
+    LibLoader.prototype.parseFlatDir = function (response, leafDescriptor) {
+        return MpdEntries.readEntries(response).map(function (inObj) {
+            if (inObj.dir && leafDescriptor.indexOf("directory") >= 0) {
+                return { "directory": inObj.dir };
+            } else if (inObj.playlist && leafDescriptor.indexOf("playlist") >= 0) {
+                return { "playlist": inObj.playlist };
+            } else if (inObj.song) {
+                var outObj = {};
+                leafDescriptor.forEach(function (key) {
+                    if (inObj.song.hasOwnProperty(key)) {
+                        outObj[key] = inObj.song[key];
+                    }
+                });
+                return outObj;
+            } else {
+                return {};
             }
-        }
-        return dirContent.map(function (inObj) {
-            var outObj = {};
-            leafDescriptor.forEach(function (key) {
-                outObj[key] = inObj[key];
-            });
-            return outObj;
+        }).filter(function (obj) {
+            return Object.keys(obj).length > 0;
         });
-    };
-
-    LibLoader.prototype.fillSongData = function (song, key, value) {
-        if (key == "Last-Modified") {
-            song.lastModified = value;
-        } else if (key == "Time") {
-            song.time = +value;
-        } else if (key == "Artist") {
-            song.artist = value;
-        } else if (key == "AlbumArtist") {
-            song.albumArtist = value;
-        } else if (key == "Title") {
-            song.title = value;
-        } else if (key == "Album") {
-            song.album = value;
-        } else if (key == "Track") {
-            song.track = value;
-        } else if (key == "Date") {
-            song.date = value;
-        } else if (key == "Genre") {
-            song.genre = value;
-        } else if (key == "Composer") {
-            song.composer = value;
-        }
     };
 
     // Returns a custom object tree corresponding to the descriptor

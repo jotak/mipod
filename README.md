@@ -89,6 +89,8 @@ It also provides more advanced library management, still through REST resources.
     * Add all songs / playlists from json to current playlist
 * POST {json: String} /mpd/update
     * Update MPD database on given path (empty path = whole db)
+* GET /mpd/current
+    * Get current song info being played
 * GET /mpd/custom/:command
     * Run a custom MPD command
 * GET /library/loadonce

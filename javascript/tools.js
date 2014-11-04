@@ -56,3 +56,13 @@ function extend(receiver, provider) {
     return receiver;
 }
 exports.extend = extend;
+
+function splitOnce(str, separator) {
+    var i = str.indexOf(separator);
+    if (i >= 0) {
+        return { key: str.slice(0, i), value: str.slice(i + separator.length) };
+    } else {
+        return { key: "", value: str.slice(i + separator.length) };
+    }
+}
+exports.splitOnce = splitOnce;

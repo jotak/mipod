@@ -17,6 +17,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+var MpdEntries = require('./MpdEntries');
+
 var MpdClient = require('./MpdClient');
 
 var typeCheck = require('type-check');
@@ -153,6 +155,12 @@ function register(app, mpdRoot, libRoot, library) {
         }
     });
 
+    httpGet(mpdRoot + '/current', function (req, res) {
+        answerOnPromise(MpdClient.current().then(MpdEntries.readEntries).then(function (entries) {
+            return entries.length === 0 ? {} : entries[0];
+        }), res);
+    });
+
     httpGet(mpdRoot + '/custom/:command', function (req, res) {
         answerOnPromise(MpdClient.custom(req.params.command), res);
     });
@@ -178,7 +186,7 @@ function register(app, mpdRoot, libRoot, library) {
     });
 
     httpPost(libRoot + '/lsinfo/:leafDesc?', function (req, res) {
-        var leafDesc = req.params.leafDesc || "file,directory,title,artist,album,time";
+        var leafDesc = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
         if (check("{json: String}", req.body, res)) {
             library.lsInfo(req.body.json, leafDesc.split(",")).then(function (lstContent) {
                 res.send(lstContent);

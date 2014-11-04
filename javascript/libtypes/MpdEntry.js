@@ -17,22 +17,5 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
 "use strict";
 
-interface SongInfo {
-    file: string;
-    lastModified?: string;
-    time?: number;
-    artist?: string;
-    albumArtist?: string;
-    title?: string;
-    album?: string;
-    track?: string;
-    date?: string;
-    genre?: string;
-    composer?: string;
-    pos?: number;
-    id?: number;
-}
-export = SongInfo;

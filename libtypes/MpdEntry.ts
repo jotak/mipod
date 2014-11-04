@@ -18,21 +18,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import SongInfo = require('./SongInfo');
+
 "use strict";
 
-interface SongInfo {
-    file: string;
-    lastModified?: string;
-    time?: number;
-    artist?: string;
-    albumArtist?: string;
-    title?: string;
-    album?: string;
-    track?: string;
-    date?: string;
-    genre?: string;
-    composer?: string;
-    pos?: number;
-    id?: number;
+interface MpdEntry {
+    song?: SongInfo;
+    dir?: string;
+    playlist?: string;
 }
-export = SongInfo;
+export = MpdEntry;

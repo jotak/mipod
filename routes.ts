@@ -21,6 +21,8 @@ SOFTWARE.
 /// <reference path="type-check/type-check.d.ts" />
 
 import LibLoader = require('./LibLoader');
+import MpdEntries = require('./MpdEntries');
+import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
 import q = require('q');
 import typeCheck = require('type-check');
@@ -164,6 +166,13 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
         }
     });
 
+    httpGet(mpdRoot + '/current', function(req, res) {
+        answerOnPromise(
+            MpdClient.current().then(MpdEntries.readEntries).then(function(entries: MpdEntry[]) {
+                return entries.length === 0 ? {} : entries[0];
+            }), res);
+    });
+
     httpGet(mpdRoot + '/custom/:command', function(req, res) {
         answerOnPromise(MpdClient.custom(req.params.command), res);
     });
@@ -189,7 +198,7 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
     });
 
     httpPost(libRoot + '/lsinfo/:leafDesc?', function(req, res) {
-        var leafDesc: string = req.params.leafDesc || "file,directory,title,artist,album,time";
+        var leafDesc: string = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
         if (check("{json: String}", req.body, res)) {
             library.lsInfo(req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
                 res.send(lstContent);

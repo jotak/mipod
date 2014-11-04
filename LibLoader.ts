@@ -24,7 +24,9 @@ import TagsMap = require('./libtypes/TagsMap');
 import ItemTags = require('./libtypes/ItemTags');
 import ThemeTags = require('./libtypes/ThemeTags');
 import SongInfo = require('./libtypes/SongInfo');
+import MpdEntry = require('./libtypes/MpdEntry');
 import TagTarget = require('./libtypes/TagTarget');
+import MpdEntries = require('./MpdEntries');
 import LibCache = require('./LibCache');
 import tools = require('./tools');
 import q = require('q');
@@ -39,11 +41,6 @@ interface ParserInfo {
     songs: SongInfo[];
     lines: string[];
     cursor: number;
-}
-
-interface KeyValue {
-    key: string;
-    value: string;
 }
 
 class LibLoader {
@@ -131,9 +128,8 @@ class LibLoader {
         var that = this;
         return MpdClient.lsinfo(dir)
             .then(function(response: string) {
-                var lines: string[] = response.split("\n");
                 return q.fcall<any[]>(function() {
-                    return that.parseFlatDir(lines, leafDescriptor);
+                    return that.parseFlatDir(response, leafDescriptor);
                 });
             });
     }
@@ -206,15 +202,6 @@ class LibLoader {
         }).done();
     }
 
-    private splitOnce(str: string, separator: string): KeyValue {
-        var i = str.indexOf(separator);
-        if (i >= 0) {
-            return {key: str.slice(0, i), value: str.slice(i+separator.length)};
-        } else {
-            return {key: "", value: str.slice(i+separator.length)};
-        }
-    }
-
     private loadDirForLib(songs: SongInfo[], dir: string): q.Promise<ParserInfo> {
         var that = this;
         return MpdClient.lsinfo(dir)
@@ -257,7 +244,7 @@ class LibLoader {
         var that = this;
         var currentSong: SongInfo = null;
         for (; parser.cursor < parser.lines.length; parser.cursor++) {
-            var entry: KeyValue = this.splitOnce(parser.lines[parser.cursor], ": ");
+            var entry: tools.KeyValue = tools.splitOnce(parser.lines[parser.cursor], ": ");
             var currentSong: SongInfo;
             if (entry.key == "file") {
                 currentSong = { "file": entry.value };
@@ -275,7 +262,7 @@ class LibLoader {
                 // skip
                 currentSong = null;
             } else if (currentSong != null) {
-                this.fillSongData(currentSong, entry.key, entry.value);
+                MpdEntries.setSongField(currentSong, entry.key, entry.value);
             }
         }
         // Did not find any sub-directory, return directly this data
@@ -284,53 +271,26 @@ class LibLoader {
         });
     }
 
-    private parseFlatDir(lines: string[], leafDescriptor: string[]): any[] {
-        var currentSong: SongInfo = null;
-        var dirContent: any[] = [];
-        for (var i = 0; i < lines.length; i++) {
-            var entry: KeyValue = this.splitOnce(lines[i], ": ");
-            var currentSong: SongInfo;
-            if (entry.key == "file" || entry.key == "playlist") {
-                currentSong = { "file": entry.value };
-                dirContent.push(currentSong);
-            } else if (entry.key == "directory") {
-                currentSong = null;
-                dirContent.push({ directory: entry.value });
-            } else if (currentSong != null) {
-                this.fillSongData(currentSong, entry.key, entry.value);
+    private parseFlatDir(response: string, leafDescriptor: string[]): any[] {
+        return MpdEntries.readEntries(response).map(function(inObj: MpdEntry) {
+            if (inObj.dir && leafDescriptor.indexOf("directory") >= 0) {
+                return { "directory": inObj.dir };
+            } else if (inObj.playlist && leafDescriptor.indexOf("playlist") >= 0) {
+                return { "playlist": inObj.playlist };
+            } else if (inObj.song) {
+                var outObj = {};
+                leafDescriptor.forEach(function(key: string) {
+                    if (inObj.song.hasOwnProperty(key)) {
+                        outObj[key] = inObj.song[key];
+                    }
+                });
+                return outObj;
+            } else {
+                return {};
             }
-        }
-        return dirContent.map(function(inObj) {
-            var outObj = {};
-            leafDescriptor.forEach(function(key: string) {
-                outObj[key] = inObj[key];
-            });
-            return outObj;
+        }).filter(function(obj) {
+            return Object.keys(obj).length > 0;
         });
-    }
-
-    private fillSongData(song: SongInfo, key: string, value: string) {
-        if (key == "Last-Modified") {
-            song.lastModified = value;
-        } else if (key == "Time") {
-            song.time = +value;
-        } else if (key == "Artist") {
-            song.artist = value;
-        } else if (key == "AlbumArtist") {
-            song.albumArtist = value;
-        } else if (key == "Title") {
-            song.title = value;
-        } else if (key == "Album") {
-            song.album = value;
-        } else if (key == "Track") {
-            song.track = value;
-        } else if (key == "Date") {
-            song.date = value;
-        } else if (key == "Genre") {
-            song.genre = value;
-        } else if (key == "Composer") {
-            song.composer = value;
-        }
     }
 
     // Returns a custom object tree corresponding to the descriptor
