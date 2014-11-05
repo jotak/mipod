@@ -134,6 +134,16 @@ class LibLoader {
             });
     }
 
+    public search(mode: string, searchstr: string, leafDescriptor: string[]): q.Promise<any[]> {
+        var that = this;
+        return MpdClient.search(mode, searchstr)
+            .then(function(response: string) {
+                return q.fcall<any[]>(function() {
+                    return that.parseFlatDir(response, leafDescriptor);
+                });
+            });
+    }
+
     public readTag(tagName: string, targets: TagTarget[]): q.Promise<ThemeTags> {
         if (!this.allLoaded) {
             throw new Error("Tag reading service is unavailable until the library is fully loaded.");

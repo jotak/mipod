@@ -206,6 +206,15 @@ export function register(app, mpdRoot: string, libRoot: string, library: LibLoad
         }
     });
 
+    httpPost(libRoot + '/search/:mode/:leafDesc?', function(req, res) {
+        var leafDesc: string = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
+        if (check("{json: String}", req.body, res)) {
+            library.search(req.params.mode, req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
+                res.send(lstContent);
+            });
+        }
+    });
+
     httpPost(libRoot + '/tag/:tagName/:tagValue?', function(req, res) {
         var tagName: string = req.params.tagName;
         var tagValue: string = req.params.tagValue;

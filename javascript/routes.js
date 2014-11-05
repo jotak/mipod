@@ -194,6 +194,15 @@ function register(app, mpdRoot, libRoot, library) {
         }
     });
 
+    httpPost(libRoot + '/search/:mode/:leafDesc?', function (req, res) {
+        var leafDesc = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
+        if (check("{json: String}", req.body, res)) {
+            library.search(req.params.mode, req.body.json, leafDesc.split(",")).then(function (lstContent) {
+                res.send(lstContent);
+            });
+        }
+    });
+
     httpPost(libRoot + '/tag/:tagName/:tagValue?', function (req, res) {
         var tagName = req.params.tagName;
         var tagValue = req.params.tagValue;

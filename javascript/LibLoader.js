@@ -115,6 +115,15 @@ var LibLoader = (function () {
         });
     };
 
+    LibLoader.prototype.search = function (mode, searchstr, leafDescriptor) {
+        var that = this;
+        return MpdClient.search(mode, searchstr).then(function (response) {
+            return q.fcall(function () {
+                return that.parseFlatDir(response, leafDescriptor);
+            });
+        });
+    };
+
     LibLoader.prototype.readTag = function (tagName, targets) {
         if (!this.allLoaded) {
             throw new Error("Tag reading service is unavailable until the library is fully loaded.");
