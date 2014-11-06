@@ -36,23 +36,23 @@ function check(typeDesc, obj, httpResponse) {
     return true;
 }
 "use strict";
-function register(app, restRoot, library) {
+function register(app, prefix, library) {
     var routes = [];
     var httpGet = function (path, clbk, description) {
-        app.get(restRoot + path, clbk);
-        routes.push({ path: restRoot + path, description: description, verb: "GET" });
+        app.get(prefix + path, clbk);
+        routes.push({ path: prefix + path, description: description, verb: "GET" });
     };
     var httpPost = function (path, clbk, description) {
-        app.post(restRoot + path, clbk);
-        routes.push({ path: restRoot + path, description: description, verb: "POST" });
+        app.post(prefix + path, clbk);
+        routes.push({ path: prefix + path, description: description, verb: "POST" });
     };
     var httpPut = function (path, clbk, description) {
-        app.put(restRoot + path, clbk);
-        routes.push({ path: restRoot + path, description: description, verb: "PUT" });
+        app.put(prefix + path, clbk);
+        routes.push({ path: prefix + path, description: description, verb: "PUT" });
     };
     var httpDelete = function (path, clbk, description) {
-        app.delete(restRoot + path, clbk);
-        routes.push({ path: restRoot + path, description: description, verb: "DELETE" });
+        app.delete(prefix + path, clbk);
+        routes.push({ path: prefix + path, description: description, verb: "DELETE" });
     };
     httpGet('/play', function (req, res) {
         answerOnPromise(MpdClient.play(), res);
@@ -144,25 +144,25 @@ function register(app, restRoot, library) {
         res.send({ status: status });
     });
     httpGet('/progress', function (req, res) {
-        library.progress(res);
+        res.send({ progress: library.progress() });
     });
-    httpGet('/get/:start/:count/:treeDesc?/:leafDesc?', function (req, res) {
-        var treeDesc = req.params.treeDesc || "genre,albumArtist|artist,album";
-        var leafDesc = req.params.leafDesc || "file,track,title";
-        library.getPage(res, +req.params.start, +req.params.count, treeDesc.split(","), leafDesc.split(","));
+    httpPost('/get/:start/:count', function (req, res) {
+        if (check("{treeDesc: Maybe [String], leafDesc: Maybe [String]}", req.body, res)) {
+            var treeDesc = req.body.treeDesc || ["genre", "albumArtist|artist", "album"];
+            var page = library.getPage(+req.params.start, +req.params.count, treeDesc, req.body.leafDesc);
+            res.send(page);
+        }
     });
-    httpPost('/lsinfo/:leafDesc?', function (req, res) {
-        var leafDesc = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
-        if (check("{json: String}", req.body, res)) {
-            library.lsInfo(req.body.json, leafDesc.split(",")).then(function (lstContent) {
+    httpPost('/lsinfo', function (req, res) {
+        if (check("{path: String, req.body.leafDesc: Maybe [String]}", req.body, res)) {
+            library.lsInfo(req.body.path, req.body.leafDesc).then(function (lstContent) {
                 res.send(lstContent);
             });
         }
     });
-    httpPost('/search/:mode/:leafDesc?', function (req, res) {
-        var leafDesc = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
-        if (check("{json: String}", req.body, res)) {
-            library.search(req.params.mode, req.body.json, leafDesc.split(",")).then(function (lstContent) {
+    httpPost('/search/:mode', function (req, res) {
+        if (check("{search: String, leafDesc: Maybe [String]}", req.body, res)) {
+            library.search(req.params.mode, req.body.search, req.body.leafDesc).then(function (lstContent) {
                 res.send(lstContent);
             });
         }
@@ -179,7 +179,7 @@ function register(app, restRoot, library) {
             }
         }
     });
-    app.get(restRoot + '/', function (req, res) {
+    app.get(prefix + '/', function (req, res) {
         var resp = "Available resources: <br/><ul>";
         for (var i in routes) {
             var route = routes[i];

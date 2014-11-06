@@ -26,6 +26,7 @@ import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
 import q = require('q');
 import typeCheck = require('type-check');
+import express = require('express');
 
 function answerOnPromise(promise: q.Promise<any>, httpResponse: any) {
     promise.then(function(answer: any) {
@@ -51,25 +52,25 @@ interface RouteInfo {
 }
 
 "use strict";
-export function register(app, restRoot: string, library: LibLoader) {
+export function register(app: express.Application, prefix: string, library: LibLoader) {
 
     var routes: RouteInfo[] = [];
 
     var httpGet = function(path: string, clbk, description?: string) {
-        app.get(restRoot + path, clbk);
-        routes.push({path: restRoot + path, description: description, verb: "GET"});
+        app.get(prefix + path, clbk);
+        routes.push({path: prefix + path, description: description, verb: "GET"});
     }
     var httpPost = function(path: string, clbk, description?: string) {
-        app.post(restRoot + path, clbk);
-        routes.push({path: restRoot + path, description: description, verb: "POST"});
+        app.post(prefix + path, clbk);
+        routes.push({path: prefix + path, description: description, verb: "POST"});
     }
     var httpPut = function(path: string, clbk, description?: string) {
-        app.put(restRoot + path, clbk);
-        routes.push({path: restRoot + path, description: description, verb: "PUT"});
+        app.put(prefix + path, clbk);
+        routes.push({path: prefix + path, description: description, verb: "PUT"});
     }
     var httpDelete = function(path: string, clbk, description?: string) {
-        app.delete(restRoot + path, clbk);
-        routes.push({path: restRoot + path, description: description, verb: "DELETE"});
+        app.delete(prefix + path, clbk);
+        routes.push({path: prefix + path, description: description, verb: "DELETE"});
     }
 
     httpGet('/play', function(req, res) {
@@ -188,28 +189,28 @@ export function register(app, restRoot: string, library: LibLoader) {
     });
 
     httpGet('/progress', function(req, res) {
-        library.progress(res);
+        res.send({progress: library.progress()});
     });
 
-    httpGet('/get/:start/:count/:treeDesc?/:leafDesc?', function(req, res) {
-        var treeDesc: string = req.params.treeDesc || "genre,albumArtist|artist,album";
-        var leafDesc: string = req.params.leafDesc || "file,track,title";
-        library.getPage(res, +req.params.start, +req.params.count, treeDesc.split(","), leafDesc.split(","));
+    httpPost('/get/:start/:count', function(req, res) {
+        if (check("{treeDesc: Maybe [String], leafDesc: Maybe [String]}", req.body, res)) {
+            var treeDesc: string[] = req.body.treeDesc || ["genre","albumArtist|artist","album"];
+            var page = library.getPage(+req.params.start, +req.params.count, treeDesc, req.body.leafDesc);
+            res.send(page);
+        }
     });
 
-    httpPost('/lsinfo/:leafDesc?', function(req, res) {
-        var leafDesc: string = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
-        if (check("{json: String}", req.body, res)) {
-            library.lsInfo(req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
+    httpPost('/lsinfo', function(req, res) {
+        if (check("{path: String, req.body.leafDesc: Maybe [String]}", req.body, res)) {
+            library.lsInfo(req.body.path, req.body.leafDesc).then(function(lstContent: any[]) {
                 res.send(lstContent);
             });
         }
     });
 
-    httpPost('/search/:mode/:leafDesc?', function(req, res) {
-        var leafDesc: string = req.params.leafDesc || "file,playlist,directory,title,artist,album,time";
-        if (check("{json: String}", req.body, res)) {
-            library.search(req.params.mode, req.body.json, leafDesc.split(",")).then(function(lstContent: any[]) {
+    httpPost('/search/:mode', function(req, res) {
+        if (check("{search: String, leafDesc: Maybe [String]}", req.body, res)) {
+            library.search(req.params.mode, req.body.search, req.body.leafDesc).then(function(lstContent: any[]) {
                 res.send(lstContent);
             });
         }
@@ -227,7 +228,7 @@ export function register(app, restRoot: string, library: LibLoader) {
         }
     });
 
-    app.get(restRoot + '/', function(req, res) {
+    app.get(prefix + '/', function(req, res) {
         var resp: string = "Available resources: <br/><ul>";
         for (var i in routes) {
             var route: RouteInfo = routes[i];

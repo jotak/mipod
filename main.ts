@@ -19,21 +19,36 @@ SOFTWARE.
 */
 
 /// <reference path="node/node.d.ts" />
+/// <reference path="express/express.d.ts" />
+/// <reference path="socket.io/socket.io.d.ts" />
 
 import routes = require('./routes');
+import websocket = require('./websocket');
 import tools = require('./tools');
 import LibLoader = require('./LibLoader');
 import MpdClient = require('./MpdClient');
 import O = require('./Options');
 import typeCheck = require('type-check');
+import express = require('express');
+import socketio = require('socket.io');
 
 "use strict";
 
-function listenRestRoutes(expressApp: any, options?: O.IOptions) {
+export function asRest(expressApp: express.Application, options?: O.IOptions) {
+    registerMethod(expressApp, routes.register, options);
+}
+
+export function asWebSocket(socket: socketio.Socket, options?: O.IOptions) {
+    registerMethod(socket, websocket.register, options);
+}
+
+function registerMethod(methodHandler: any,
+                        methodRegistration: (methodHandler: any, prefix: string, lib: LibLoader)=>void,
+                        options?: O.IOptions) {
     var opts: O.IOptions = options ? tools.extend(options, O.Options.default()) : O.Options.default();
 
     // Since this module can be imported from JS applications (non-typescript), we'll add some runtime type-check on Options
-    var scheme: string = "{dataPath: String, useLibCache: Boolean, rootRestPath: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number}";
+    var scheme: string = "{dataPath: String, useLibCache: Boolean, prefix: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number}";
     if (!typeCheck.typeCheck(scheme, opts)) {
         console.log("WARNING: some options provided to mipod contain unknown or invalid properties. You should fix them.");
         console.log("Options provided: " + JSON.stringify(options));
@@ -49,7 +64,6 @@ function listenRestRoutes(expressApp: any, options?: O.IOptions) {
     if (opts.loadLibOnStartup) {
         lib.forceRefresh();
     }
-    routes.register(expressApp, opts.rootRestPath, lib);
+    methodRegistration(methodHandler, opts.prefix, lib);
 }
 
-export = listenRestRoutes;

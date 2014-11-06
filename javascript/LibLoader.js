@@ -87,18 +87,18 @@ var LibLoader = (function () {
         this.loadAllLib();
         return "OK";
     };
-    LibLoader.prototype.getPage = function (res, start, count, treeDescriptor, leafDescriptor) {
+    LibLoader.prototype.getPage = function (start, count, treeDescriptor, leafDescriptor) {
         var end = Math.min(this.mpdContent.length, start + count);
         var subTree = this.organizeJsonLib(this.getSongsPage(this.mpdContent, start, end), treeDescriptor, leafDescriptor);
-        res.send({
+        return {
             status: "OK",
             finished: (this.allLoaded && end === this.mpdContent.length),
             next: end,
             data: subTree.root
-        });
+        };
     };
-    LibLoader.prototype.progress = function (res) {
-        res.send(new String(this.loadingCounter));
+    LibLoader.prototype.progress = function () {
+        return String(this.loadingCounter);
     };
     LibLoader.prototype.lsInfo = function (dir, leafDescriptor) {
         var that = this;
@@ -247,20 +247,25 @@ var LibLoader = (function () {
     };
     LibLoader.prototype.parseFlatDir = function (response, leafDescriptor) {
         return MpdEntries.readEntries(response).map(function (inObj) {
-            if (inObj.dir && leafDescriptor.indexOf("directory") >= 0) {
+            if (inObj.dir && (leafDescriptor === undefined || leafDescriptor.indexOf("directory") >= 0)) {
                 return { "directory": inObj.dir };
             }
-            else if (inObj.playlist && leafDescriptor.indexOf("playlist") >= 0) {
+            else if (inObj.playlist && (leafDescriptor === undefined || leafDescriptor.indexOf("playlist") >= 0)) {
                 return { "playlist": inObj.playlist };
             }
             else if (inObj.song) {
-                var outObj = {};
-                leafDescriptor.forEach(function (key) {
-                    if (inObj.song.hasOwnProperty(key)) {
-                        outObj[key] = inObj.song[key];
-                    }
-                });
-                return outObj;
+                if (leafDescriptor) {
+                    var outObj = {};
+                    leafDescriptor.forEach(function (key) {
+                        if (inObj.song.hasOwnProperty(key)) {
+                            outObj[key] = inObj.song[key];
+                        }
+                    });
+                    return outObj;
+                }
+                else {
+                    return inObj.song;
+                }
             }
             else {
                 return {};
@@ -304,11 +309,16 @@ var LibLoader = (function () {
                 treePtr = treePtr[valueForKey].mpd;
                 depth++;
             });
-            var leaf = {};
-            leafDescriptor.forEach(function (key) {
-                leaf[key] = song[key];
-            });
-            treePtr.push(leaf);
+            if (leafDescriptor) {
+                var leaf = {};
+                leafDescriptor.forEach(function (key) {
+                    leaf[key] = song[key];
+                });
+                treePtr.push(leaf);
+            }
+            else {
+                treePtr.push(song);
+            }
         });
         return { root: tree };
     };

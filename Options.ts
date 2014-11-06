@@ -24,7 +24,7 @@ module Options {
     export interface IOptions {
         dataPath?: string;
         useLibCache?: boolean;
-        rootRestPath?: string;
+        prefix?: string;
         loadLibOnStartup?: boolean;
         mpdHost?: string;
         mpdPort?: number;
@@ -33,7 +33,7 @@ module Options {
     export class Options implements IOptions {
         constructor(public dataPath: string,
                     public useLibCache: boolean,
-                    public rootRestPath: string,
+                    public prefix: string,
                     public loadLibOnStartup: boolean,
                     public mpdHost: string,
                     public mpdPort: number) {

@@ -39,7 +39,7 @@ function usage() {
     console.log("");
     console.log("Options:");
     console.log("  -p=$X, --port=$X                setup server port (default 80)");
-    console.log("  --root=$path                    setup root for REST requests (default /mipod)");
+    console.log("  --prefix=$path                  setup prefix for REST resources (default /mipod)");
     console.log("  --mpdHost=$host                 MPD server hostname (default localhost)");
     console.log("  --mpdPort=$X                    MPD server port (default 6600)");
     console.log("  --dataPath=$path                local path where data files will be stored");
@@ -61,8 +61,8 @@ var mapParams: { [key: string]: (val: string) => void; } = {
             process.exit(0);
         }
     },
-    "--root": function(val: string) {
-        opts.rootRestPath = val;
+    "--prefix": function(val: string) {
+        opts.prefix = val;
     },
     "--mpdHost": function(val: string) {
         opts.mpdHost = val;
@@ -112,7 +112,7 @@ process.argv.forEach(function(arg: string, index: number, array) {
     }
 });
 
-mipod(app, opts);
+mipod.asRest(app, opts);
 
 app.listen(port);
 

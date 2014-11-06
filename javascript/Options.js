@@ -21,10 +21,10 @@ SOFTWARE.
 var Options;
 (function (_Options) {
     var Options = (function () {
-        function Options(dataPath, useLibCache, rootRestPath, loadLibOnStartup, mpdHost, mpdPort) {
+        function Options(dataPath, useLibCache, prefix, loadLibOnStartup, mpdHost, mpdPort) {
             this.dataPath = dataPath;
             this.useLibCache = useLibCache;
-            this.rootRestPath = rootRestPath;
+            this.prefix = prefix;
             this.loadLibOnStartup = loadLibOnStartup;
             this.mpdHost = mpdHost;
             this.mpdPort = mpdPort;

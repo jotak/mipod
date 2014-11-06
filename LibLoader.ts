@@ -106,25 +106,25 @@ class LibLoader {
         return "OK";
     }
 
-    public getPage(res, start: number, count: number, treeDescriptor: string[], leafDescriptor: string[]) {
+    public getPage(start: number, count: number, treeDescriptor: string[], leafDescriptor?: string[]) {
         var end: number = Math.min(this.mpdContent.length, start + count);
         var subTree: Tree = this.organizeJsonLib(
             this.getSongsPage(this.mpdContent, start, end),
                 treeDescriptor,
                 leafDescriptor);
-        res.send({
+        return {
             status: "OK",
             finished: (this.allLoaded && end === this.mpdContent.length),
             next: end,
             data: subTree.root
-        });
+        };
     }
 
-    public progress(res) {
-        res.send(new String(this.loadingCounter));
+    public progress(): string {
+        return String(this.loadingCounter);
     }
 
-    public lsInfo(dir: string, leafDescriptor: string[]): q.Promise<any[]> {
+    public lsInfo(dir: string, leafDescriptor?: string[]): q.Promise<any[]> {
         var that = this;
         return MpdClient.lsinfo(dir)
             .then(function(response: string) {
@@ -134,7 +134,7 @@ class LibLoader {
             });
     }
 
-    public search(mode: string, searchstr: string, leafDescriptor: string[]): q.Promise<any[]> {
+    public search(mode: string, searchstr: string, leafDescriptor?: string[]): q.Promise<any[]> {
         var that = this;
         return MpdClient.search(mode, searchstr)
             .then(function(response: string) {
@@ -281,20 +281,24 @@ class LibLoader {
         });
     }
 
-    private parseFlatDir(response: string, leafDescriptor: string[]): any[] {
+    private parseFlatDir(response: string, leafDescriptor?: string[]): any[] {
         return MpdEntries.readEntries(response).map(function(inObj: MpdEntry) {
-            if (inObj.dir && leafDescriptor.indexOf("directory") >= 0) {
+            if (inObj.dir && (leafDescriptor === undefined || leafDescriptor.indexOf("directory") >= 0)) {
                 return { "directory": inObj.dir };
-            } else if (inObj.playlist && leafDescriptor.indexOf("playlist") >= 0) {
+            } else if (inObj.playlist && (leafDescriptor === undefined || leafDescriptor.indexOf("playlist") >= 0)) {
                 return { "playlist": inObj.playlist };
             } else if (inObj.song) {
-                var outObj = {};
-                leafDescriptor.forEach(function(key: string) {
-                    if (inObj.song.hasOwnProperty(key)) {
-                        outObj[key] = inObj.song[key];
-                    }
-                });
-                return outObj;
+                if (leafDescriptor) {
+                    var outObj = {};
+                    leafDescriptor.forEach(function(key: string) {
+                        if (inObj.song.hasOwnProperty(key)) {
+                            outObj[key] = inObj.song[key];
+                        }
+                    });
+                    return outObj;
+                } else {
+                    return inObj.song;
+                }
             } else {
                 return {};
             }
@@ -304,7 +308,7 @@ class LibLoader {
     }
 
     // Returns a custom object tree corresponding to the descriptor
-    private organizeJsonLib(flat: SongInfo[], treeDescriptor: string[], leafDescriptor: string[]): Tree {
+    private organizeJsonLib(flat: SongInfo[], treeDescriptor: string[], leafDescriptor?: string[]): Tree {
         var that = this;
         var tree = {};
         flat.forEach(function(song: SongInfo) {
@@ -337,11 +341,15 @@ class LibLoader {
                 treePtr = treePtr[valueForKey].mpd;
                 depth++;
             });
-            var leaf = {};
-            leafDescriptor.forEach(function(key: string) {
-                leaf[key] = song[key];
-            });
-            treePtr.push(leaf);
+            if (leafDescriptor) {
+                var leaf = {};
+                leafDescriptor.forEach(function(key: string) {
+                    leaf[key] = song[key];
+                });
+                treePtr.push(leaf);
+            } else {
+                treePtr.push(song);
+            }
         });
         return {root: tree};
     }
