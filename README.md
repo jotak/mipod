@@ -6,9 +6,10 @@ Javascript + node package lies in folder [javascript](https://github.com/jotak/m
 
 It can be used either as a nodejs dependency module or as a stand-alone server.
 
-mipod provides basic MPD commands exposed as REST resources, such as *'GET /mpd/play'*.
+mipod provides basic MPD commands exposed as REST resources, such as *'GET /mipod/play'*.
 It also provides more advanced library management, still through REST resources. You can control playback, save and load playlists, browse the musics files folder by folder or get all in a go. There are also some non-MPD features such as songs rating.
 
+In the near future, mipod will be able to communicate through websockets.
 
 ## Usage
 
@@ -16,12 +17,11 @@ It also provides more advanced library management, still through REST resources.
   As a stand-alone server, you only need the javascript files under directory '''javascript'''. Copy them to the place you want, and run mipod-rest.js with node:
   * *node mipod-rest.js*
   
-  That's all you need to start the server with default parameters. It will listen to requests on port 80 and connects to a MPD server on localhost:6600. Try out http://localhost/mpd/play or http://localhost/mpd/pause, if you have an MPD server running, you should hear immediate results.
+  That's all you need to start the server with default parameters. It will listen to requests on port 80 and connects to a MPD server on localhost:6600. Try out http://localhost/mipod/play or http://localhost/mipod/pause, if you have an MPD server running, you should hear immediate results.
 
   Configurable options are:
   * **-p=$X, --port=$X** setup server port (default 80)
-  * **-m=$path, --mpdRoot=$path** setup MPD-related root for REST requests (default /mpd)
-  * **-l=$path, --libraryRoot=$path** setup library-related root for REST requests (default /library). You can eventually choose the same as mpdRoot.
+  * **--root=$path** setup root for REST requests (default /mipod)
   * **--mpdHost=$host** MPD server hostname (default localhost)
   * **--mpdPort=$X** MPD server port (default 6600)
   * **--dataPath=$path** local path where data files will be stored
@@ -40,79 +40,81 @@ It also provides more advanced library management, still through REST resources.
   * **mipod(app, opts)** app is your own ''express'' application, opts is a set of options equivalent to the ones described above (typescript: interface IOptions from Options.ts):
     * dataPath: string
     * useLibCache: boolean
-    * mpdRestPath: string
-    * libRestPath: string
+    * rootRestPath: string
     * loadLibOnStartup: boolean
     * mpdHost: string
     * mpdPort: number
 
 ## Routes
-* GET /mpd/**play**
+* GET /mipod/**play**
     * Enter "play" mode.
-* POST {json: String} /mpd/**play**
+* POST {json: String} /mipod/**play**
     * Play given file (song or playlist), replacing the current playlist
-* GET /mpd/**playidx**/:idx
+* GET /mipod/**playidx**/:idx
     * Play song from playlist at given index
-* POST {json: String} /mpd/**add**
+* POST {json: String} /mipod/**add**
     * Add given file (song or playlist) to current playlist
-* GET /mpd/**clear**
+* GET /mipod/**clear**
     * Clear current playlist
-* GET /mpd/**pause**
+* GET /mipod/**pause**
     * Pause current song
-* GET /mpd/**stop**
+* GET /mipod/**stop**
     * Stop current song
-* GET /mpd/**next**
+* GET /mipod/**next**
     * Next song in playlist
-* GET /mpd/**prev**
+* GET /mipod/**prev**
     * Previous song in playlist
-* GET /mpd/**volume**/:value
+* GET /mipod/**volume**/:value
     * Set the volume (from 0 to 100)
-* GET /mpd/**repeat**/:enabled
+* GET /mipod/**repeat**/:enabled
     * Enable or disable repeat mode (expect 0/1)
-* GET /mpd/**random**/:enabled
+* GET /mipod/**random**/:enabled
     * Enable or disable random mode (expect 0/1)
-* GET /mpd/**single**/:enabled
+* GET /mipod/**single**/:enabled
     * Enable or disable single mode (expect 0/1)
-* GET /mpd/**consume**/:enabled
+* GET /mipod/**consume**/:enabled
     * Enable or disable consume mode (expect 0/1)
-* GET /mpd/**seek**/:songIdx/:posInSong
+* GET /mipod/**seek**/:songIdx/:posInSong
     * Seek song position
-* GET /mpd/**rmqueue**/:songIdx
+* GET /mipod/**rmqueue**/:songIdx
     * Remove song from its index in current playlist
-* GET /mpd/**deletelist**/:name
+* GET /mipod/**deletelist**/:name
     * Delete saved playlist
-* GET /mpd/**savelist**/:name
+* GET /mipod/**savelist**/:name
     * Save current playlist with given file name
-* POST {json: [String]} /mpd/**playall**
+* POST {json: [String]} /mipod/**playall**
     * Play all songs / playlists from json (replaces current playlist)
-* POST {json: [String]} /mpd/**addall**
+* POST {json: [String]} /mipod/**addall**
     * Add all songs / playlists from json to current playlist
-* POST {json: String} /mpd/**update**
+* POST {json: String} /mipod/**update**
     * Update MPD database on given path (empty path = whole db)
-* GET /mpd/**current**
+* GET /mipod/**current**
     * Get current song info being played
-* GET /mpd/**custom**/:command
+* GET /mipod/**custom**/:command
     * Run a custom MPD command
-* GET /library/**loadonce**
+* GET /mipod/**loadonce**
     * Trigger library scan, which will put result in cache and available for "library/get" calls.
-* GET /library/**reload**
+* GET /mipod/**reload**
     * Force rescanning the library (clears cache)
-* GET /library/**progress**
+* GET /mipod/**progress**
     * Get progress information on library loading. This call will returns a number in range [0, number of songs].
-* GET /library/**get**/:start/:count/:treeDesc?/:leafDesc?
+* GET /mipod/**get**/:start/:count/:treeDesc?/:leafDesc?
     * Get a map of currently loaded songs, using paginating info provided.
     * Returned json is {"status":(status code as String),"finished":(boolean, false if there's still items to pick up),"next":(number, the next item id to pick up),"data":(a map representing data as requested)}
     * "start" is the start item id of requested page. Note that you should use the "next" returned number as subsequent "start" call.
     * "count" is the number of items you try to get. Note that you may receive less than "count" items when MPD scanning is still ongoing or if you've reached the total number of items.
     * "treeDesc" is a descriptor of how you would like to receive data. By default, it is "genre,albumArtist|artist,album", which means you'll get a map of {genre1:{artist1:{album1:[leaves (see below)]}, artist2: etc.}}. The "pipe" means it will look to the wanted tag (ex: albumArtist), and if not found, look for the next one (ex: artist).
     * "leafDesc" is a descriptor of tags to include in leaves, that is, most commonly, songs. By default it is "file,track,title".
-* POST {json: String} /library/**lsinfo**/:leafDesc?
+* POST {json: String} /mipod/**lsinfo**/:leafDesc?
     * An equivalent method of the above that returns only a flat reprensentation of a given path.
-* POST {json: String} /library/**search**/:mode/:leafDesc?
+* POST {json: String} /mipod/**search**/:mode/:leafDesc?
     * Search for an MPD entry matching posted given string. "mode" can be any type od data recognized by MPD (check MPD documentation), for instance "file" or "any".
-* POST {targets: [{targetType: String, target: String}]} /library/**tag**/:tagName/:tagValue?
+* POST {targets: [{targetType: String, target: String}]} /mipod/**tag**/:tagName/:tagValue?
     * Get (if tagValue undefined) or set (if tagValue defined) a custom tag associated to a given target.
     * Expecting POST data: "targetType" refers to a MPD tag (song, artist, album etc.). "target" depends on "targetType": for a song, will be the MPD path for instance.
 
 ## License
 Copyright 2014 Joël Takvorian, [MIT License](https://github.com/jotak/mipod/blob/master/LICENSE)
+
+## Contact
+Feel free to [report issues on Github](https://github.com/jotak/mipod/issues) or contact me (contact information [available on npmjs](https://www.npmjs.org/~jotak))

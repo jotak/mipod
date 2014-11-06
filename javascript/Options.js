@@ -21,17 +21,16 @@ SOFTWARE.
 var Options;
 (function (_Options) {
     var Options = (function () {
-        function Options(dataPath, useLibCache, mpdRestPath, libRestPath, loadLibOnStartup, mpdHost, mpdPort) {
+        function Options(dataPath, useLibCache, rootRestPath, loadLibOnStartup, mpdHost, mpdPort) {
             this.dataPath = dataPath;
             this.useLibCache = useLibCache;
-            this.mpdRestPath = mpdRestPath;
-            this.libRestPath = libRestPath;
+            this.rootRestPath = rootRestPath;
             this.loadLibOnStartup = loadLibOnStartup;
             this.mpdHost = mpdHost;
             this.mpdPort = mpdPort;
         }
         Options.default = function () {
-            return new Options("data", true, "/mpd", "/library", false, "localhost", 6600);
+            return new Options("data", true, "/mipod", false, "localhost", 6600);
         };
         return Options;
     })();

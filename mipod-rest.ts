@@ -39,8 +39,7 @@ function usage() {
     console.log("");
     console.log("Options:");
     console.log("  -p=$X, --port=$X                setup server port (default 80)");
-    console.log("  -m=$path, --mpdRoot=$path       setup MPD-related root for REST requests (default /mpd)");
-    console.log("  -l=$path, --libraryRoot=$path   setup library-related root for REST requests (default /library)");
+    console.log("  --root=$path                    setup root for REST requests (default /mipod)");
     console.log("  --mpdHost=$host                 MPD server hostname (default localhost)");
     console.log("  --mpdPort=$X                    MPD server port (default 6600)");
     console.log("  --dataPath=$path                local path where data files will be stored");
@@ -49,7 +48,7 @@ function usage() {
     console.log("  -h, --help                      this");
     console.log("");
     console.log("Example:");
-    console.log("  node mipod-rest -p=81 -m=/some/resource -l=/another/resource");
+    console.log("  node mipod-rest -p=81 --root=/site/mpd");
     console.log("");
     console.log("More documentation available on https://github.com/jotak/mipod");
 }
@@ -62,11 +61,8 @@ var mapParams: { [key: string]: (val: string) => void; } = {
             process.exit(0);
         }
     },
-    "--mpdRoot": function(val: string) {
-        opts.mpdRestPath = val;
-    },
-    "--libraryRoot": function(val: string) {
-        opts.libRestPath = val;
+    "--root": function(val: string) {
+        opts.rootRestPath = val;
     },
     "--mpdHost": function(val: string) {
         opts.mpdHost = val;
@@ -94,8 +90,6 @@ var mapParams: { [key: string]: (val: string) => void; } = {
 };
 
 mapParams["-p"] = mapParams["--port"];
-mapParams["-m"] = mapParams["--mpdRoot"];
-mapParams["-l"] = mapParams["--libraryRoot"];
 mapParams["-h"] = mapParams["--help"];
 
 process.argv.forEach(function(arg: string, index: number, array) {

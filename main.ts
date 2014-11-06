@@ -33,7 +33,7 @@ function listenRestRoutes(expressApp: any, options?: O.IOptions) {
     var opts: O.IOptions = options ? tools.extend(options, O.Options.default()) : O.Options.default();
 
     // Since this module can be imported from JS applications (non-typescript), we'll add some runtime type-check on Options
-    var scheme: string = "{dataPath: String, useLibCache: Boolean, mpdRestPath: String, libRestPath: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number}";
+    var scheme: string = "{dataPath: String, useLibCache: Boolean, rootRestPath: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number}";
     if (!typeCheck.typeCheck(scheme, opts)) {
         console.log("WARNING: some options provided to mipod contain unknown or invalid properties. You should fix them.");
         console.log("Options provided: " + JSON.stringify(options));
@@ -49,7 +49,7 @@ function listenRestRoutes(expressApp: any, options?: O.IOptions) {
     if (opts.loadLibOnStartup) {
         lib.forceRefresh();
     }
-    routes.register(expressApp, opts.mpdRestPath, opts.libRestPath, lib);
+    routes.register(expressApp, opts.rootRestPath, lib);
 }
 
 export = listenRestRoutes;

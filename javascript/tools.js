@@ -26,10 +26,12 @@ function override(receiver, provider) {
             if ({}.hasOwnProperty.call(receiver, prop)) {
                 if (typeof provider[prop] === 'object') {
                     this.override(receiver[prop], provider[prop]);
-                } else {
+                }
+                else {
                     receiver[prop] = provider[prop];
                 }
-            } else {
+            }
+            else {
                 receiver[prop] = provider[prop];
             }
         }
@@ -37,7 +39,6 @@ function override(receiver, provider) {
     return receiver;
 }
 exports.override = override;
-
 /**
 * Extend missing content of 'receiver' with 'provider'
 */
@@ -48,7 +49,8 @@ function extend(receiver, provider) {
                 if (typeof provider[prop] === 'object') {
                     this.extend(receiver[prop], provider[prop]);
                 }
-            } else {
+            }
+            else {
                 receiver[prop] = provider[prop];
             }
         }
@@ -56,12 +58,12 @@ function extend(receiver, provider) {
     return receiver;
 }
 exports.extend = extend;
-
 function splitOnce(str, separator) {
     var i = str.indexOf(separator);
     if (i >= 0) {
         return { key: str.slice(0, i), value: str.slice(i + separator.length) };
-    } else {
+    }
+    else {
         return { key: "", value: str.slice(i + separator.length) };
     }
 }

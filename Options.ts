@@ -24,8 +24,7 @@ module Options {
     export interface IOptions {
         dataPath?: string;
         useLibCache?: boolean;
-        mpdRestPath?: string;
-        libRestPath?: string;
+        rootRestPath?: string;
         loadLibOnStartup?: boolean;
         mpdHost?: string;
         mpdPort?: number;
@@ -34,14 +33,13 @@ module Options {
     export class Options implements IOptions {
         constructor(public dataPath: string,
                     public useLibCache: boolean,
-                    public mpdRestPath: string,
-                    public libRestPath: string,
+                    public rootRestPath: string,
                     public loadLibOnStartup: boolean,
                     public mpdHost: string,
                     public mpdPort: number) {
         }
         static default(): IOptions {
-            return new Options("data", true, "/mpd", "/library", false, "localhost", 6600);
+            return new Options("data", true, "/mipod", false, "localhost", 6600);
         }
     }
 }

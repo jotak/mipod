@@ -24,20 +24,16 @@ var LibLoader = require('./LibLoader');
 var MpdClient = require('./MpdClient');
 var O = require('./Options');
 var typeCheck = require('type-check');
-
 "use strict";
-
 function listenRestRoutes(expressApp, options) {
     var opts = options ? tools.extend(options, O.Options.default()) : O.Options.default();
-
     // Since this module can be imported from JS applications (non-typescript), we'll add some runtime type-check on Options
-    var scheme = "{dataPath: String, useLibCache: Boolean, mpdRestPath: String, libRestPath: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number}";
+    var scheme = "{dataPath: String, useLibCache: Boolean, rootRestPath: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number}";
     if (!typeCheck.typeCheck(scheme, opts)) {
         console.log("WARNING: some options provided to mipod contain unknown or invalid properties. You should fix them.");
         console.log("Options provided: " + JSON.stringify(options));
         console.log("Expected options scheme: " + scheme);
     }
-
     MpdClient.configure(opts.mpdHost, opts.mpdPort);
     var lib = new LibLoader();
     lib.setDataPath(opts.dataPath);
@@ -47,7 +43,6 @@ function listenRestRoutes(expressApp, options) {
     if (opts.loadLibOnStartup) {
         lib.forceRefresh();
     }
-    routes.register(expressApp, opts.mpdRestPath, opts.libRestPath, lib);
+    routes.register(expressApp, opts.rootRestPath, lib);
 }
-
 module.exports = listenRestRoutes;
