@@ -30,7 +30,7 @@ In the near future, mipod will be able to communicate through websockets.
   * **-h, --help** help
 
 2. Node module inclusion
-  You can download sources from github, or use npm (https://www.npmjs.org/package/mipod). Since mipod is written in [typescript](http://www.typescriptlang.org/), you may want to benefit from this and import it in your own typescript code:
+  You can download sources from github, or use npm (https://www.npmjs.org/package/mipod - note that only javascript is packaged with NPM, you wouldn't have access to typescript code this way). Since mipod is written in [typescript](http://www.typescriptlang.org/), you may want to benefit from this and import it in your own typescript code:
   * **import mipod = require('mipod');**
 
   or do the equivalent in javascript:
