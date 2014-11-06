@@ -78,8 +78,8 @@ export function register(app: express.Application, prefix: string, library: LibL
     });
 
     httpPost('/play', function(req, res) {
-        if (check("{json: String}", req.body, res)) {
-            answerOnPromise(MpdClient.playEntry(req.body.json), res);
+        if (check("{entry: String}", req.body, res)) {
+            answerOnPromise(MpdClient.playEntry(req.body.entry), res);
         }
     });
 
@@ -88,8 +88,8 @@ export function register(app: express.Application, prefix: string, library: LibL
     });
 
     httpPost('/add', function(req, res) {
-        if (check("{json: String}", req.body, res)) {
-            answerOnPromise(MpdClient.add(req.body.json), res);
+        if (check("{entry: String}", req.body, res)) {
+            answerOnPromise(MpdClient.add(req.body.entry), res);
         }
     });
 
@@ -150,20 +150,20 @@ export function register(app: express.Application, prefix: string, library: LibL
     });
 
     httpPost('/playall', function(req, res) {
-        if (check("{json: [String]}", req.body, res)) {
-            answerOnPromise(MpdClient.playAll(req.body.json), res);
+        if (check("{entries: [String]}", req.body, res)) {
+            answerOnPromise(MpdClient.playAll(req.body.entries), res);
         }
     });
 
     httpPost('/addall', function(req, res) {
-        if (check("{json: [String]}", req.body, res)) {
-            answerOnPromise(MpdClient.addAll(req.body.json), res);
+        if (check("{entries: [String]}", req.body, res)) {
+            answerOnPromise(MpdClient.addAll(req.body.entries), res);
         }
     });
 
     httpPost('/update', function(req, res) {
-        if (check("{json: String}", req.body, res)) {
-            answerOnPromise(MpdClient.update(req.body.json), res);
+        if (check("{path: String}", req.body, res)) {
+            answerOnPromise(MpdClient.update(req.body.path), res);
         }
     });
 
