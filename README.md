@@ -30,11 +30,11 @@ It also provides more advanced library management, still through REST resources.
   * **-h, --help** help
 
 2. Node module inclusion
-  You can download sources from github. Since mipod is written in [typescript](http://www.typescriptlang.org/), you may want to benefit from this and import it in your own typescript code:
-  * **import mipod = require('path/to/mipod/main');**
+  You can download sources from github, or use npm (https://www.npmjs.org/package/mipod). Since mipod is written in [typescript](http://www.typescriptlang.org/), you may want to benefit from this and import it in your own typescript code:
+  * **import mipod = require('mipod');**
 
   or do the equivalent in javascript:
-  * **var mipod = require('path/to/mipod/main.js');**
+  * **var mipod = require('mipod');**
   
   Then, register routes by calling:
   * **mipod(app, opts)** app is your own ''express'' application, opts is a set of options equivalent to the ones described above (typescript: interface IOptions from Options.ts):
