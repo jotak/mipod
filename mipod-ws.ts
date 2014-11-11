@@ -35,7 +35,6 @@ var httpServer = http.createServer(app);
 var websock = socketio.listen(httpServer);
 
 var opts: O.IOptions = O.Options.default();
-opts.prefix = "";
 var port: number = 80;
 
 function usage() {

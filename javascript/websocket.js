@@ -23,12 +23,12 @@ var MpdClient = require('./MpdClient');
 
 var typeCheck = require('type-check');
 
-function answerOnPromise(promise, socket, word) {
+function answerOnPromise(promise, socket, word, context) {
     promise.then(function (answer) {
-        socket.emit(word, { success: answer });
+        socket.emit(word, { success: answer, context: context });
     }).fail(function (reason) {
         console.log("Application error: " + reason.message);
-        socket.emit(word, { failure: String(reason) });
+        socket.emit(word, { failure: String(reason), context: context });
     }).done();
 }
 
@@ -196,17 +196,17 @@ function register(socket, prefix, library) {
     });
 
     socket.on(word("lsinfo"), function (body) {
-        if (check("{path: String, leafDesc: Maybe [String]}", body, socket, word("lsinfo"))) {
+        if (check("{token: Maybe Number, path: String, leafDesc: Maybe [String]}", body, socket, word("lsinfo"))) {
             library.lsInfo(body.path, body.leafDesc).then(function (lstContent) {
-                socket.emit(word("lsinfo"), lstContent);
+                socket.emit(word("lsinfo"), { token: body.token, content: lstContent });
             });
         }
     });
 
     socket.on(word("search"), function (body) {
-        if (check("{mode: String, search: String, leafDesc: Maybe [String]}", body, socket, word("search"))) {
+        if (check("{token: Maybe Number, mode: String, search: String, leafDesc: Maybe [String]}", body, socket, word("search"))) {
             library.search(body.mode, body.search, body.leafDesc).then(function (lstContent) {
-                socket.emit(word("search"), lstContent);
+                socket.emit(word("search"), { token: body.token, content: lstContent });
             });
         }
     });
@@ -214,9 +214,9 @@ function register(socket, prefix, library) {
     socket.on(word("tag"), function (body) {
         if (check("{tagName: String, tagValue: String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
             if (body.tagValue === undefined) {
-                answerOnPromise(library.readTag(body.tagName, body.targets), socket, word("tag"));
+                answerOnPromise(library.readTag(body.tagName, body.targets), socket, word("tag"), body);
             } else {
-                answerOnPromise(library.writeTag(body.tagName, body.tagValue, body.targets), socket, word("tag"));
+                answerOnPromise(library.writeTag(body.tagName, body.tagValue, body.targets), socket, word("tag"), body);
             }
         }
     });

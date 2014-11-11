@@ -19,7 +19,7 @@ It also provides more advanced library management, still through REST resources 
 
   Configurable options are:
   * **-p=$X, --port=$X** setup server port (default 80)
-  * **--prefix=$path** setup root for REST requests (default /mipod)
+  * **--prefix=$path** setup root for REST requests (default empty)
   * **--mpdHost=$host** MPD server hostname (default localhost)
   * **--mpdPort=$X** MPD server port (default 6600)
   * **--dataPath=$path** local path where data files will be stored
@@ -31,7 +31,7 @@ It also provides more advanced library management, still through REST resources 
     It's very similar to the REST server. Run:
   * *node mipod-ws.js*
   
-  And the server will listen on default port (80) for websocket events. Options are the same than for the REST server, only **--prefix** will differ a bit since it won't prefix the REST resource obviously, but the websocket word event. Also, its default value is just empty (no prefix).
+  And the server will listen on default port (80) for websocket events. Options are the same than for the REST server, only **--prefix** will differ a bit since it won't prefix the REST resource obviously, but the websocket word event.
 
 3. Node module inclusion
   You can download sources from github, or use npm (https://www.npmjs.org/package/mipod - note that only javascript is packaged with NPM, you wouldn't have access to typescript code this way). Since mipod is written in [typescript](http://www.typescriptlang.org/), you may want to benefit from this and import it in your own typescript code:
@@ -86,9 +86,9 @@ It also provides more advanced library management, still through REST resources 
 | Reload | GET /mipod/reload | reload | Force rescanning the library (clears cache)
 | Progress | GET /mipod/progress | progress | Get progress information on library loading. This call will returns a number in range [0, number of songs]
 | Get | POST _{treeDesc: Maybe [String], leafDesc: Maybe [String]}_ /mipod/get/:start/:count | get {start: Number, count: Number, treeDesc: Maybe [String], leafDesc: Maybe [String]} | Get a map of currently loaded songs, using paginating info provided<ul><li>Returned json is _{"status":(status code as String),"finished":(boolean, false if there's still items to pick up),"next":(number, the next item id to pick up),"data":(a map representing data as requested)}_</li><li>"start" is the start item id of requested page. Note that you should use the "next" returned number as subsequent "start" call</li><li>"count" is the number of items you try to get. Note that you may receive less than "count" items when MPD scanning is still ongoing or if you've reached the total number of items</li><li>"treeDesc" is the tree descriptor (see dedicated section below). If unset, _["genre","albumArtist&#124;artist","album"]_ will be used</li><li>"leafDesc" is the leaf descriptor (see dedicated section below). If unset, all available data will be returned (which may affect performance on large libraries)</li></ul>
-| Ls info | POST _{path: String, leafDesc: Maybe [String]}_ /mipod/lsinfo | lsinfo {path: String, leafDesc: Maybe [String]} | An equivalent method of the above that returns only a flat reprensentation of a given path
-| Search | POST _{search: String, leafDesc: Maybe [String]}_ /mipod/search/:mode | search {mode: String, search: String, leafDesc: Maybe [String]} | Search for an MPD entry matching posted given string. "mode" can be any type od data recognized by MPD (check MPD documentation), for instance "file" or "any"
-| Tag | POST _{targets: [{targetType: String, target: String}]}_ /mipod/tag/:tagName/:tagValue? | tag {tagName: String, tagValue: String, targets: [{targetType: String, target: String}]} | Get (if tagValue undefined) or set (if tagValue defined) a custom tag associated to a given target. Expecting POST data: <ul><li>"targetType" refers to a MPD tag (song, artist, album etc.)</li><li>"target" depends on "targetType": for a song, will be the MPD path for instance</li></ul>
+| Ls info | POST _{path: String, leafDesc: Maybe [String]}_ /mipod/lsinfo | lsinfo {token: Maybe Number, path: String, leafDesc: Maybe [String]} | An equivalent method of the above that returns only a flat reprensentation of a given path. If a token was provided, it's returned in response event (Websocket only).
+| Search | POST _{search: String, leafDesc: Maybe [String]}_ /mipod/search/:mode | search {token: Maybe Number, mode: String, search: String, leafDesc: Maybe [String]} | Search for an MPD entry matching posted given string. "mode" can be any type od data recognized by MPD (check MPD documentation), for instance "file" or "any". If a token was provided, it's returned in response event (Websocket only).
+| Tag | POST _{targets: [{targetType: String, target: String}]}_ /mipod/tag/:tagName/:tagValue? | tag {tagName: String, tagValue: String, targets: [{targetType: String, target: String}]} | Get (if tagValue undefined) or set (if tagValue defined) a custom tag associated to a given target. Expecting POST data: <ul><li>"targetType" refers to a MPD tag (song, artist, album etc.)</li><li>"target" depends on "targetType": for a song, will be the MPD path for instance</li></ul>On websockets, the context parameters are returned in the response event.
 
 ### Tree and leaf descriptors
 Some commands sent to MPD will return a list of entries, which are basically directories, playlist files and song files with metadata. **Mipod has the ability to organize them the way you want**. You would like sometimes to get them as flat lists, or as trees organized by albums, artists, etc. That's what treeDesc and leafDesc are for.

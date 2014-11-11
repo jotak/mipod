@@ -39,7 +39,7 @@ module Options {
                     public mpdPort: number) {
         }
         static default(): IOptions {
-            return new Options("data", true, "/mipod", false, "localhost", 6600);
+            return new Options("data", true, "", false, "localhost", 6600);
         }
     }
 }

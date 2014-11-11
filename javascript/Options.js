@@ -30,7 +30,7 @@ var Options;
             this.mpdPort = mpdPort;
         }
         Options.default = function () {
-            return new Options("data", true, "/mipod", false, "localhost", 6600);
+            return new Options("data", true, "", false, "localhost", 6600);
         };
         return Options;
     })();

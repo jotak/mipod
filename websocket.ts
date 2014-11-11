@@ -28,12 +28,12 @@ import q = require('q');
 import typeCheck = require('type-check');
 import socketio = require('socket.io');
 
-function answerOnPromise(promise: q.Promise<any>, socket: socketio.Socket, word: string) {
+function answerOnPromise(promise: q.Promise<any>, socket: socketio.Socket, word: string, context?: any) {
     promise.then(function(answer: any) {
-        socket.emit(word, {success: answer});
+        socket.emit(word, {success: answer, context: context});
     }).fail(function(reason: Error) {
         console.log("Application error: " + reason.message);
-        socket.emit(word, {failure: String(reason)});
+        socket.emit(word, {failure: String(reason), context: context});
     }).done();
 }
 
@@ -200,17 +200,17 @@ export function register(socket: socketio.Socket, prefix: string, library: LibLo
     });
 
     socket.on(word("lsinfo"), function(body) {
-        if (check("{path: String, leafDesc: Maybe [String]}", body, socket, word("lsinfo"))) {
+        if (check("{token: Maybe Number, path: String, leafDesc: Maybe [String]}", body, socket, word("lsinfo"))) {
             library.lsInfo(body.path, body.leafDesc).then(function(lstContent: any[]) {
-                socket.emit(word("lsinfo"), lstContent);
+                socket.emit(word("lsinfo"), {token: body.token, content: lstContent});
             });
         }
     });
 
     socket.on(word("search"), function(body) {
-        if (check("{mode: String, search: String, leafDesc: Maybe [String]}", body, socket, word("search"))) {
+        if (check("{token: Maybe Number, mode: String, search: String, leafDesc: Maybe [String]}", body, socket, word("search"))) {
             library.search(body.mode, body.search, body.leafDesc).then(function(lstContent: any[]) {
-                socket.emit(word("search"), lstContent);
+                socket.emit(word("search"), {token: body.token, content: lstContent});
             });
         }
     });
@@ -218,9 +218,9 @@ export function register(socket: socketio.Socket, prefix: string, library: LibLo
     socket.on(word("tag"), function(body) {
         if (check("{tagName: String, tagValue: String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
             if (body.tagValue === undefined) {
-                answerOnPromise(library.readTag(body.tagName, body.targets), socket, word("tag"));
+                answerOnPromise(library.readTag(body.tagName, body.targets), socket, word("tag"), body);
             } else {
-                answerOnPromise(library.writeTag(body.tagName, body.tagValue, body.targets), socket, word("tag"));
+                answerOnPromise(library.writeTag(body.tagName, body.tagValue, body.targets), socket, word("tag"), body);
             }
         }
     });
