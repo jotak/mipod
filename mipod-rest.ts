@@ -25,7 +25,6 @@ SOFTWARE.
 import express = require('express');
 import bodyParser = require('body-parser');
 import mipod = require('./main');
-import LibLoader = require('./LibLoader');
 import O = require('./Options');
 
 "use strict";

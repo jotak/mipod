@@ -20,7 +20,7 @@ SOFTWARE.
 
 /// <reference path="type-check/type-check.d.ts" />
 
-import LibLoader = require('./LibLoader');
+import Library = require('./Library');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
@@ -46,7 +46,7 @@ function check(typeDesc: string, obj: any, socket: socketio.Socket, word: string
 }
 
 "use strict";
-export function register(socket: socketio.Socket, prefix: string, library: LibLoader) {
+export function register(socket: socketio.Socket, prefix: string, library: Library.Loader) {
 
     var word = function(word: string): string { return prefix + word; }
 
@@ -176,26 +176,40 @@ export function register(socket: socketio.Socket, prefix: string, library: LibLo
         }
     });
 
-    socket.on(word("loadonce"), function() {
+    socket.on(word("lib-loadonce"), function() {
         var status: string = library.loadOnce();
-        socket.emit(word("loadonce"), {status: status});
+        socket.emit(word("lib-loadonce"), {status: status});
     });
 
-    socket.on(word("reload"), function() {
+    socket.on(word("lib-reload"), function() {
         var status: string = library.forceRefresh();
-        socket.emit(word("reload"), {status: status});
+        socket.emit(word("lib-reload"), {status: status});
     });
 
-    socket.on(word("progress"), function() {
-        var status: string = library.progress();
-        socket.emit(word("progress"), {progress: status});
+    socket.on(word("lib-progress"), function() {
+        socket.emit(word("lib-progress"), {progress: library.progress()});
     });
 
-    socket.on(word("get"), function(body) {
-        if (check("{start: Number, count: Number, treeDesc: Maybe [String], leafDesc: Maybe [String]}", body, socket, word("get"))) {
+    socket.on(word("lib-get"), function(body) {
+        if (check("{start: Number, count: Number, treeDesc: Maybe [String], leafDesc: Maybe [String]}", body, socket, word("lib-get"))) {
             var treeDesc: string[] = body.treeDesc || ["genre","albumArtist|artist","album"];
             var page = library.getPage(body.start, body.count, treeDesc, body.leafDesc);
-            socket.emit(word("get"), page);
+            socket.emit(word("lib-get"), page);
+        }
+    });
+
+    socket.on(word("lib-push"), function(body) {
+        if (check("{maxBatchSize: Number, treeDesc: Maybe [String], leafDesc: Maybe [String]}", body, socket, word("lib-push"))) {
+            var treeDesc: string[] = body.treeDesc || ["genre","albumArtist|artist","album"];
+            library.onLoadingProgress(
+                function(data: Library.LoadingData, nbItems: number) {
+                    socket.emit(word("lib-push"), {progress: nbItems, data: data});
+                },
+                function(nbItems: number) {
+                    socket.emit(word("lib-finished-loading"), {nbItems: nbItems});
+                },
+                body.maxBatchSize, treeDesc, body.leafDesc
+            );
         }
     });
 

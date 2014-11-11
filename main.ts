@@ -25,7 +25,7 @@ SOFTWARE.
 import routes = require('./routes');
 import websocket = require('./websocket');
 import tools = require('./tools');
-import LibLoader = require('./LibLoader');
+import Library = require('./Library');
 import MpdClient = require('./MpdClient');
 import O = require('./Options');
 import typeCheck = require('type-check');
@@ -43,7 +43,7 @@ export function asWebSocket(socket: socketio.Socket, options?: O.IOptions) {
 }
 
 function registerMethod(methodHandler: any,
-                        methodRegistration: (methodHandler: any, prefix: string, lib: LibLoader)=>void,
+                        methodRegistration: (methodHandler: any, prefix: string, lib: Library.Loader)=>void,
                         options?: O.IOptions) {
     var opts: O.IOptions = options ? tools.extend(options, O.Options.default()) : O.Options.default();
 
@@ -56,7 +56,7 @@ function registerMethod(methodHandler: any,
     }
 
     MpdClient.configure(opts.mpdHost, opts.mpdPort);
-    var lib: LibLoader = new LibLoader();
+    var lib: Library.Loader = new Library.Loader();
     lib.setDataPath(opts.dataPath);
     if (opts.useLibCache) {
         lib.setUseCacheFile(true);

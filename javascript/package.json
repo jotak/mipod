@@ -1,6 +1,6 @@
 {
   "name": "mipod",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A node module for exposing an MPD API, either as REST service, as Websocket or as a library to include. Written in Typescript, executed in Javascript.",
   "homepage": "https://github.com/jotak/mipod",
   "author": "Joël Takvorian <joel.takvorian@qaraywa.net> (https://github.com/jotak)",
@@ -31,5 +31,12 @@
     "q": ">=1.0.0",
     "type-check": ">=0.3.0",
     "socket.io": "~1.2.0"
+  },
+  "devDependencies": {
+    "mocha": "~2.0.0",
+    "should": "~4.3.0"
+  },
+  "scripts": {
+    "test": "node_modules/.bin/mocha"
   }
 }

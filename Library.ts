@@ -43,13 +43,81 @@ interface ParserInfo {
     cursor: number;
 }
 
-class LibLoader {
+class LoadingListener {
+    private collected: SongInfo[];
+    private hTimeout: any;
+    private totalItems: number;
+    private nbSent: number;
+    constructor(public pushHandler: (data: any, nbItems: number)=>void,
+                public finishedHandler: (nbItems: number)=>void,
+                public maxBatchSize: number,
+                public treeDescriptor: string[],
+                public leafDescriptor?: string[]) {
+        this.collected = [];
+        this.hTimeout = null;
+        this.totalItems = -1;
+        this.nbSent = 0;
+    }
+
+    public setTotalItems(nbItems: number) {
+        this.totalItems = nbItems;
+        if (this.nbSent === nbItems) {
+            this.finishedHandler(nbItems);
+            this.totalItems = -1;
+        }
+    }
+
+    public collect(song: SongInfo, tags: ThemeTags) {
+        this.collected.push(song);
+        if (this.hTimeout === null) {
+            var that: LoadingListener = this;
+            this.hTimeout = setTimeout(function() {
+                that.pushBatches(that.collected, tags, 0);
+                that.collected = [];
+                that.hTimeout = null;
+            }, 200);
+        }
+    }
+
+    public pushBatches(data: SongInfo[], tags: ThemeTags, start: number) {
+        var batchSize: number = Math.min(this.maxBatchSize, data.length - start);
+        if (batchSize > 0) {
+            this.nbSent += batchSize;
+            this.pushHandler(organizer(data.slice(start, start+batchSize), tags, this.treeDescriptor, this.leafDescriptor).root, this.nbSent);
+            start += batchSize;
+            if (start < data.length) {
+                var that: LoadingListener = this;
+                setTimeout(function() {
+                    that.pushBatches(data, tags, start);
+                }, 200);
+            } else if (this.nbSent === this.totalItems) {
+                this.finishedHandler(this.totalItems);
+                this.totalItems = -1;
+            }
+        } else {
+            if (this.nbSent === this.totalItems) {
+                this.finishedHandler(this.totalItems);
+                this.totalItems = -1;
+            }
+        }
+    }
+}
+
+export interface LoadingData {
+    status: string;
+    finished: boolean;
+    next: number;
+    data: any;
+}
+
+export class Loader {
     private dataPath: string = "data/";
     private useCacheFile: boolean = false;
     private allLoaded: boolean = false;
     private loadingCounter: number = 0;
     private mpdContent: SongInfo[] = [];
     private tags: ThemeTags = {};
+    private loadingListener: LoadingListener = undefined;
 
     public setUseCacheFile(useCacheFile: boolean) {
         this.useCacheFile = useCacheFile;
@@ -57,6 +125,10 @@ class LibLoader {
 
     public setDataPath(dataPath: string) {
         this.dataPath = dataPath;
+    }
+
+    public onLoadingProgress(pushHandler: (data: LoadingData, nbItems: number)=>void, finishedHandler: (nbItems: number)=>void, maxBatchSize: number, treeDescriptor: string[], leafDescriptor?: string[]) {
+        this.loadingListener = new LoadingListener(pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor);
     }
 
     public loadOnce(): string {
@@ -84,6 +156,10 @@ class LibLoader {
                         that.loadAllLib();
                     } else {
                         that.allLoaded = true;
+                        if (that.loadingListener) {
+                            that.loadingListener.setTotalItems(that.mpdContent.length);
+                            that.loadingListener.pushBatches(data, that.tags, 0);
+                        }
                     }
                 }).fail(function(reason: Error) {
                     console.log("Could not read cache: " + reason.message);
@@ -106,10 +182,11 @@ class LibLoader {
         return "OK";
     }
 
-    public getPage(start: number, count: number, treeDescriptor: string[], leafDescriptor?: string[]) {
+    public getPage(start: number, count: number, treeDescriptor: string[], leafDescriptor?: string[]): LoadingData {
         var end: number = Math.min(this.mpdContent.length, start + count);
-        var subTree: Tree = this.organizeJsonLib(
+        var subTree: Tree = organizer(
             this.getSongsPage(this.mpdContent, start, end),
+                this.tags,
                 treeDescriptor,
                 leafDescriptor);
         return {
@@ -120,8 +197,8 @@ class LibLoader {
         };
     }
 
-    public progress(): string {
-        return String(this.loadingCounter);
+    public progress(): number {
+        return this.loadingCounter;
     }
 
     public lsInfo(dir: string, leafDescriptor?: string[]): q.Promise<any[]> {
@@ -204,6 +281,9 @@ class LibLoader {
         var that = this;
         this.loadDirForLib(this.mpdContent, "").then(function() {
             that.allLoaded = true;
+            if (that.loadingListener) {
+                that.loadingListener.setTotalItems(that.mpdContent.length);
+            }
             if (that.useCacheFile) {
                 LibCache.saveCache(that.cacheFile(), that.mpdContent).fail(function(reason: Error) {
                     console.log("Cache not saved: " + reason.message);
@@ -219,6 +299,12 @@ class LibLoader {
                 var lines: string[] = response.split("\n");
                 return that.parseNext({ songs: songs, lines: lines, cursor: 0 });
             });
+    }
+
+    private collect(song: SongInfo) {
+        if (this.loadingListener) {
+            this.loadingListener.collect(song, this.tags);
+        }
     }
 
     /*
@@ -255,12 +341,13 @@ class LibLoader {
         var currentSong: SongInfo = null;
         for (; parser.cursor < parser.lines.length; parser.cursor++) {
             var entry: tools.KeyValue = tools.splitOnce(parser.lines[parser.cursor], ": ");
-            var currentSong: SongInfo;
-            if (entry.key == "file") {
+            if (entry.key === "file") {
+                currentSong !== null && this.collect(currentSong);
                 currentSong = { "file": entry.value };
                 parser.songs.push(currentSong);
                 this.loadingCounter++;
-            } else if (entry.key == "directory") {
+            } else if (entry.key === "directory") {
+                currentSong !== null && this.collect(currentSong);
                 currentSong = null;
                 // Load (async) the directory content, and then only continue on parsing what remains here
                 return this.loadDirForLib(parser.songs, entry.value)
@@ -268,13 +355,15 @@ class LibLoader {
                         // this "subParser" contains gathered songs, whereas the existing "parser" contains previous cursor information that we need to continue on this folder
                         return that.parseNext({ songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
                     });
-            } else if (entry.key == "playlist") {
+            } else if (entry.key === "playlist") {
                 // skip
+                currentSong !== null && this.collect(currentSong);
                 currentSong = null;
             } else if (currentSong != null) {
                 MpdEntries.setSongField(currentSong, entry.key, entry.value);
             }
         }
+        currentSong !== null && this.collect(currentSong);
         // Did not find any sub-directory, return directly this data
         return q.fcall<ParserInfo>(function() {
             return parser;
@@ -307,53 +396,6 @@ class LibLoader {
         });
     }
 
-    // Returns a custom object tree corresponding to the descriptor
-    private organizeJsonLib(flat: SongInfo[], treeDescriptor: string[], leafDescriptor?: string[]): Tree {
-        var that = this;
-        var tree = {};
-        flat.forEach(function(song: SongInfo) {
-            var treePtr: any = tree;
-            var depth = 1;
-            // strPossibleKeys can be like "albumArtist|artist", or just "album" for instance
-            treeDescriptor.forEach(function(strPossibleKeys: string) {
-                var possibleKeys: string[] = strPossibleKeys.split("|");
-                var valueForKey: any = undefined;
-                for (var key in possibleKeys) {
-                    valueForKey = song[possibleKeys[key]];
-                    if (valueForKey !== undefined && valueForKey !== "") {
-                        break;
-                    }
-                }
-                if (valueForKey === undefined) {
-                    valueForKey = "";
-                }
-                if (!treePtr[valueForKey]) {
-                    if (depth === treeDescriptor.length) {
-                        treePtr[valueForKey] = {tags: {}, mpd: []};
-                    } else {
-                        treePtr[valueForKey] = {tags: {}, mpd: {}};
-                    }
-                    var mostCommonKey: string = possibleKeys[possibleKeys.length-1];
-                    if (that.tags[mostCommonKey] && that.tags[mostCommonKey][valueForKey]) {
-                        treePtr[valueForKey].tags = that.tags[mostCommonKey][valueForKey];
-                    }
-                }
-                treePtr = treePtr[valueForKey].mpd;
-                depth++;
-            });
-            if (leafDescriptor) {
-                var leaf = {};
-                leafDescriptor.forEach(function(key: string) {
-                    leaf[key] = song[key];
-                });
-                treePtr.push(leaf);
-            } else {
-                treePtr.push(song);
-            }
-        });
-        return {root: tree};
-    }
-
     private getSongsPage(allSongs: SongInfo[], start: number, end: number): SongInfo[] {
         if (end > start) {
             return allSongs.slice(start, end);
@@ -361,4 +403,49 @@ class LibLoader {
         return [];
     }
 }
-export = LibLoader;
+
+// Returns a custom object tree corresponding to the descriptor
+function organizer(flat: SongInfo[], tags: ThemeTags, treeDescriptor: string[], leafDescriptor?: string[]): Tree {
+    var tree = {};
+    flat.forEach(function(song: SongInfo) {
+        var treePtr: any = tree;
+        var depth = 1;
+        // strPossibleKeys can be like "albumArtist|artist", or just "album" for instance
+        treeDescriptor.forEach(function(strPossibleKeys: string) {
+            var possibleKeys: string[] = strPossibleKeys.split("|");
+            var valueForKey: any = undefined;
+            for (var key in possibleKeys) {
+                valueForKey = song[possibleKeys[key]];
+                if (valueForKey !== undefined && valueForKey !== "") {
+                    break;
+                }
+            }
+            if (valueForKey === undefined) {
+                valueForKey = "";
+            }
+            if (!treePtr[valueForKey]) {
+                if (depth === treeDescriptor.length) {
+                    treePtr[valueForKey] = {tags: {}, mpd: []};
+                } else {
+                    treePtr[valueForKey] = {tags: {}, mpd: {}};
+                }
+                var mostCommonKey: string = possibleKeys[possibleKeys.length-1];
+                if (tags[mostCommonKey] && tags[mostCommonKey][valueForKey]) {
+                    treePtr[valueForKey].tags = tags[mostCommonKey][valueForKey];
+                }
+            }
+            treePtr = treePtr[valueForKey].mpd;
+            depth++;
+        });
+        if (leafDescriptor) {
+            var leaf = {};
+            leafDescriptor.forEach(function(key: string) {
+                leaf[key] = song[key];
+            });
+            treePtr.push(leaf);
+        } else {
+            treePtr.push(song);
+        }
+    });
+    return {root: tree};
+}

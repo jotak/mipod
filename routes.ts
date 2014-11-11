@@ -20,7 +20,7 @@ SOFTWARE.
 
 /// <reference path="type-check/type-check.d.ts" />
 
-import LibLoader = require('./LibLoader');
+import Library = require('./Library');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
@@ -52,7 +52,7 @@ interface RouteInfo {
 }
 
 "use strict";
-export function register(app: express.Application, prefix: string, library: LibLoader) {
+export function register(app: express.Application, prefix: string, library: Library.Loader) {
 
     var routes: RouteInfo[] = [];
 
@@ -178,21 +178,21 @@ export function register(app: express.Application, prefix: string, library: LibL
         answerOnPromise(MpdClient.custom(req.params.command), res);
     });
 
-    httpGet('/loadonce', function(req, res) {
+    httpGet('/lib-loadonce', function(req, res) {
         var status: string = library.loadOnce();
         res.send({status: status});
     });
 
-    httpGet('/reload', function(req, res) {
+    httpGet('/lib-reload', function(req, res) {
         var status: string = library.forceRefresh();
         res.send({status: status});
     });
 
-    httpGet('/progress', function(req, res) {
+    httpGet('/lib-progress', function(req, res) {
         res.send({progress: library.progress()});
     });
 
-    httpPost('/get/:start/:count', function(req, res) {
+    httpPost('/lib-get/:start/:count', function(req, res) {
         if (check("{treeDesc: Maybe [String], leafDesc: Maybe [String]}", req.body, res)) {
             var treeDesc: string[] = req.body.treeDesc || ["genre","albumArtist|artist","album"];
             var page = library.getPage(+req.params.start, +req.params.count, treeDesc, req.body.leafDesc);

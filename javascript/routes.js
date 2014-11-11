@@ -165,21 +165,21 @@ function register(app, prefix, library) {
         answerOnPromise(MpdClient.custom(req.params.command), res);
     });
 
-    httpGet('/loadonce', function (req, res) {
+    httpGet('/lib-loadonce', function (req, res) {
         var status = library.loadOnce();
         res.send({ status: status });
     });
 
-    httpGet('/reload', function (req, res) {
+    httpGet('/lib-reload', function (req, res) {
         var status = library.forceRefresh();
         res.send({ status: status });
     });
 
-    httpGet('/progress', function (req, res) {
+    httpGet('/lib-progress', function (req, res) {
         res.send({ progress: library.progress() });
     });
 
-    httpPost('/get/:start/:count', function (req, res) {
+    httpPost('/lib-get/:start/:count', function (req, res) {
         if (check("{treeDesc: Maybe [String], leafDesc: Maybe [String]}", req.body, res)) {
             var treeDesc = req.body.treeDesc || ["genre", "albumArtist|artist", "album"];
             var page = library.getPage(+req.params.start, +req.params.count, treeDesc, req.body.leafDesc);

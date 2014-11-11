@@ -27,24 +27,86 @@ var q = require('q');
 
 "use strict";
 
-var LibLoader = (function () {
-    function LibLoader() {
+var LoadingListener = (function () {
+    function LoadingListener(pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor) {
+        this.pushHandler = pushHandler;
+        this.finishedHandler = finishedHandler;
+        this.maxBatchSize = maxBatchSize;
+        this.treeDescriptor = treeDescriptor;
+        this.leafDescriptor = leafDescriptor;
+        this.collected = [];
+        this.hTimeout = null;
+        this.totalItems = -1;
+        this.nbSent = 0;
+    }
+    LoadingListener.prototype.setTotalItems = function (nbItems) {
+        this.totalItems = nbItems;
+        if (this.nbSent === nbItems) {
+            this.finishedHandler(nbItems);
+            this.totalItems = -1;
+        }
+    };
+
+    LoadingListener.prototype.collect = function (song, tags) {
+        this.collected.push(song);
+        if (this.hTimeout === null) {
+            var that = this;
+            this.hTimeout = setTimeout(function () {
+                that.pushBatches(that.collected, tags, 0);
+                that.collected = [];
+                that.hTimeout = null;
+            }, 200);
+        }
+    };
+
+    LoadingListener.prototype.pushBatches = function (data, tags, start) {
+        var batchSize = Math.min(this.maxBatchSize, data.length - start);
+        if (batchSize > 0) {
+            this.nbSent += batchSize;
+            this.pushHandler(organizer(data.slice(start, start + batchSize), tags, this.treeDescriptor, this.leafDescriptor).root, this.nbSent);
+            start += batchSize;
+            if (start < data.length) {
+                var that = this;
+                setTimeout(function () {
+                    that.pushBatches(data, tags, start);
+                }, 200);
+            } else if (this.nbSent === this.totalItems) {
+                this.finishedHandler(this.totalItems);
+                this.totalItems = -1;
+            }
+        } else {
+            if (this.nbSent === this.totalItems) {
+                this.finishedHandler(this.totalItems);
+                this.totalItems = -1;
+            }
+        }
+    };
+    return LoadingListener;
+})();
+
+var Loader = (function () {
+    function Loader() {
         this.dataPath = "data/";
         this.useCacheFile = false;
         this.allLoaded = false;
         this.loadingCounter = 0;
         this.mpdContent = [];
         this.tags = {};
+        this.loadingListener = undefined;
     }
-    LibLoader.prototype.setUseCacheFile = function (useCacheFile) {
+    Loader.prototype.setUseCacheFile = function (useCacheFile) {
         this.useCacheFile = useCacheFile;
     };
 
-    LibLoader.prototype.setDataPath = function (dataPath) {
+    Loader.prototype.setDataPath = function (dataPath) {
         this.dataPath = dataPath;
     };
 
-    LibLoader.prototype.loadOnce = function () {
+    Loader.prototype.onLoadingProgress = function (pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor) {
+        this.loadingListener = new LoadingListener(pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor);
+    };
+
+    Loader.prototype.loadOnce = function () {
         if (this.allLoaded) {
             // Already loaded, no need to load again.
             return "Already loaded";
@@ -69,6 +131,10 @@ var LibLoader = (function () {
                         that.loadAllLib();
                     } else {
                         that.allLoaded = true;
+                        if (that.loadingListener) {
+                            that.loadingListener.setTotalItems(that.mpdContent.length);
+                            that.loadingListener.pushBatches(data, that.tags, 0);
+                        }
                     }
                 }).fail(function (reason) {
                     console.log("Could not read cache: " + reason.message);
@@ -82,7 +148,7 @@ var LibLoader = (function () {
         }
     };
 
-    LibLoader.prototype.forceRefresh = function () {
+    Loader.prototype.forceRefresh = function () {
         this.allLoaded = false;
         this.loadingCounter = 0;
         this.mpdContent = [];
@@ -91,9 +157,9 @@ var LibLoader = (function () {
         return "OK";
     };
 
-    LibLoader.prototype.getPage = function (start, count, treeDescriptor, leafDescriptor) {
+    Loader.prototype.getPage = function (start, count, treeDescriptor, leafDescriptor) {
         var end = Math.min(this.mpdContent.length, start + count);
-        var subTree = this.organizeJsonLib(this.getSongsPage(this.mpdContent, start, end), treeDescriptor, leafDescriptor);
+        var subTree = organizer(this.getSongsPage(this.mpdContent, start, end), this.tags, treeDescriptor, leafDescriptor);
         return {
             status: "OK",
             finished: (this.allLoaded && end === this.mpdContent.length),
@@ -102,11 +168,11 @@ var LibLoader = (function () {
         };
     };
 
-    LibLoader.prototype.progress = function () {
-        return String(this.loadingCounter);
+    Loader.prototype.progress = function () {
+        return this.loadingCounter;
     };
 
-    LibLoader.prototype.lsInfo = function (dir, leafDescriptor) {
+    Loader.prototype.lsInfo = function (dir, leafDescriptor) {
         var that = this;
         return MpdClient.lsinfo(dir).then(function (response) {
             return q.fcall(function () {
@@ -115,7 +181,7 @@ var LibLoader = (function () {
         });
     };
 
-    LibLoader.prototype.search = function (mode, searchstr, leafDescriptor) {
+    Loader.prototype.search = function (mode, searchstr, leafDescriptor) {
         var that = this;
         return MpdClient.search(mode, searchstr).then(function (response) {
             return q.fcall(function () {
@@ -124,7 +190,7 @@ var LibLoader = (function () {
         });
     };
 
-    LibLoader.prototype.readTag = function (tagName, targets) {
+    Loader.prototype.readTag = function (tagName, targets) {
         if (!this.allLoaded) {
             throw new Error("Tag reading service is unavailable until the library is fully loaded.");
         }
@@ -147,7 +213,7 @@ var LibLoader = (function () {
         });
     };
 
-    LibLoader.prototype.writeTag = function (tagName, tagValue, targets) {
+    Loader.prototype.writeTag = function (tagName, tagValue, targets) {
         if (!this.allLoaded) {
             throw new Error("Tag writing service is unavailable until the library is fully loaded.");
         }
@@ -170,18 +236,21 @@ var LibLoader = (function () {
         return deferred.promise;
     };
 
-    LibLoader.prototype.cacheFile = function () {
+    Loader.prototype.cacheFile = function () {
         return this.dataPath + "/libcache.json";
     };
 
-    LibLoader.prototype.tagsFile = function () {
+    Loader.prototype.tagsFile = function () {
         return this.dataPath + "/libtags.json";
     };
 
-    LibLoader.prototype.loadAllLib = function () {
+    Loader.prototype.loadAllLib = function () {
         var that = this;
         this.loadDirForLib(this.mpdContent, "").then(function () {
             that.allLoaded = true;
+            if (that.loadingListener) {
+                that.loadingListener.setTotalItems(that.mpdContent.length);
+            }
             if (that.useCacheFile) {
                 LibCache.saveCache(that.cacheFile(), that.mpdContent).fail(function (reason) {
                     console.log("Cache not saved: " + reason.message);
@@ -190,12 +259,18 @@ var LibLoader = (function () {
         }).done();
     };
 
-    LibLoader.prototype.loadDirForLib = function (songs, dir) {
+    Loader.prototype.loadDirForLib = function (songs, dir) {
         var that = this;
         return MpdClient.lsinfo(dir).then(function (response) {
             var lines = response.split("\n");
             return that.parseNext({ songs: songs, lines: lines, cursor: 0 });
         });
+    };
+
+    Loader.prototype.collect = function (song) {
+        if (this.loadingListener) {
+            this.loadingListener.collect(song, this.tags);
+        }
     };
 
     /*
@@ -227,17 +302,18 @@ var LibLoader = (function () {
     Date: 2004
     Genre: Rock
     */
-    LibLoader.prototype.parseNext = function (parser) {
+    Loader.prototype.parseNext = function (parser) {
         var that = this;
         var currentSong = null;
         for (; parser.cursor < parser.lines.length; parser.cursor++) {
             var entry = tools.splitOnce(parser.lines[parser.cursor], ": ");
-            var currentSong;
-            if (entry.key == "file") {
+            if (entry.key === "file") {
+                currentSong !== null && this.collect(currentSong);
                 currentSong = { "file": entry.value };
                 parser.songs.push(currentSong);
                 this.loadingCounter++;
-            } else if (entry.key == "directory") {
+            } else if (entry.key === "directory") {
+                currentSong !== null && this.collect(currentSong);
                 currentSong = null;
 
                 // Load (async) the directory content, and then only continue on parsing what remains here
@@ -245,13 +321,15 @@ var LibLoader = (function () {
                     // this "subParser" contains gathered songs, whereas the existing "parser" contains previous cursor information that we need to continue on this folder
                     return that.parseNext({ songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
                 });
-            } else if (entry.key == "playlist") {
+            } else if (entry.key === "playlist") {
                 // skip
+                currentSong !== null && this.collect(currentSong);
                 currentSong = null;
             } else if (currentSong != null) {
                 MpdEntries.setSongField(currentSong, entry.key, entry.value);
             }
         }
+        currentSong !== null && this.collect(currentSong);
 
         // Did not find any sub-directory, return directly this data
         return q.fcall(function () {
@@ -259,7 +337,7 @@ var LibLoader = (function () {
         });
     };
 
-    LibLoader.prototype.parseFlatDir = function (response, leafDescriptor) {
+    Loader.prototype.parseFlatDir = function (response, leafDescriptor) {
         return MpdEntries.readEntries(response).map(function (inObj) {
             if (inObj.dir && (leafDescriptor === undefined || leafDescriptor.indexOf("directory") >= 0)) {
                 return { "directory": inObj.dir };
@@ -285,60 +363,59 @@ var LibLoader = (function () {
         });
     };
 
-    // Returns a custom object tree corresponding to the descriptor
-    LibLoader.prototype.organizeJsonLib = function (flat, treeDescriptor, leafDescriptor) {
-        var that = this;
-        var tree = {};
-        flat.forEach(function (song) {
-            var treePtr = tree;
-            var depth = 1;
-
-            // strPossibleKeys can be like "albumArtist|artist", or just "album" for instance
-            treeDescriptor.forEach(function (strPossibleKeys) {
-                var possibleKeys = strPossibleKeys.split("|");
-                var valueForKey = undefined;
-                for (var key in possibleKeys) {
-                    valueForKey = song[possibleKeys[key]];
-                    if (valueForKey !== undefined && valueForKey !== "") {
-                        break;
-                    }
-                }
-                if (valueForKey === undefined) {
-                    valueForKey = "";
-                }
-                if (!treePtr[valueForKey]) {
-                    if (depth === treeDescriptor.length) {
-                        treePtr[valueForKey] = { tags: {}, mpd: [] };
-                    } else {
-                        treePtr[valueForKey] = { tags: {}, mpd: {} };
-                    }
-                    var mostCommonKey = possibleKeys[possibleKeys.length - 1];
-                    if (that.tags[mostCommonKey] && that.tags[mostCommonKey][valueForKey]) {
-                        treePtr[valueForKey].tags = that.tags[mostCommonKey][valueForKey];
-                    }
-                }
-                treePtr = treePtr[valueForKey].mpd;
-                depth++;
-            });
-            if (leafDescriptor) {
-                var leaf = {};
-                leafDescriptor.forEach(function (key) {
-                    leaf[key] = song[key];
-                });
-                treePtr.push(leaf);
-            } else {
-                treePtr.push(song);
-            }
-        });
-        return { root: tree };
-    };
-
-    LibLoader.prototype.getSongsPage = function (allSongs, start, end) {
+    Loader.prototype.getSongsPage = function (allSongs, start, end) {
         if (end > start) {
             return allSongs.slice(start, end);
         }
         return [];
     };
-    return LibLoader;
+    return Loader;
 })();
-module.exports = LibLoader;
+exports.Loader = Loader;
+
+// Returns a custom object tree corresponding to the descriptor
+function organizer(flat, tags, treeDescriptor, leafDescriptor) {
+    var tree = {};
+    flat.forEach(function (song) {
+        var treePtr = tree;
+        var depth = 1;
+
+        // strPossibleKeys can be like "albumArtist|artist", or just "album" for instance
+        treeDescriptor.forEach(function (strPossibleKeys) {
+            var possibleKeys = strPossibleKeys.split("|");
+            var valueForKey = undefined;
+            for (var key in possibleKeys) {
+                valueForKey = song[possibleKeys[key]];
+                if (valueForKey !== undefined && valueForKey !== "") {
+                    break;
+                }
+            }
+            if (valueForKey === undefined) {
+                valueForKey = "";
+            }
+            if (!treePtr[valueForKey]) {
+                if (depth === treeDescriptor.length) {
+                    treePtr[valueForKey] = { tags: {}, mpd: [] };
+                } else {
+                    treePtr[valueForKey] = { tags: {}, mpd: {} };
+                }
+                var mostCommonKey = possibleKeys[possibleKeys.length - 1];
+                if (tags[mostCommonKey] && tags[mostCommonKey][valueForKey]) {
+                    treePtr[valueForKey].tags = tags[mostCommonKey][valueForKey];
+                }
+            }
+            treePtr = treePtr[valueForKey].mpd;
+            depth++;
+        });
+        if (leafDescriptor) {
+            var leaf = {};
+            leafDescriptor.forEach(function (key) {
+                leaf[key] = song[key];
+            });
+            treePtr.push(leaf);
+        } else {
+            treePtr.push(song);
+        }
+    });
+    return { root: tree };
+}

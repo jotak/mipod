@@ -23,7 +23,7 @@ SOFTWARE.
 var routes = require('./routes');
 var websocket = require('./websocket');
 var tools = require('./tools');
-var LibLoader = require('./LibLoader');
+var Library = require('./Library');
 var MpdClient = require('./MpdClient');
 var O = require('./Options');
 var typeCheck = require('type-check');
@@ -52,7 +52,7 @@ function registerMethod(methodHandler, methodRegistration, options) {
     }
 
     MpdClient.configure(opts.mpdHost, opts.mpdPort);
-    var lib = new LibLoader();
+    var lib = new Library.Loader();
     lib.setDataPath(opts.dataPath);
     if (opts.useLibCache) {
         lib.setUseCacheFile(true);

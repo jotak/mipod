@@ -26,7 +26,6 @@ import express = require('express');
 import http = require('http');
 import socketio = require('socket.io');
 import mipod = require('./main');
-import LibLoader = require('./LibLoader');
 import O = require('./Options');
 
 "use strict";
