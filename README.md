@@ -115,26 +115,33 @@ The available names are:
 ## Examples
 
 ### REST
+
+Examples here use jquery ($.ajax)
+
+Swith to play mode
 ```javascript
-    // Play (with jQuery)
     $.ajax({
         type: 'GET',
-        url: '/mipod/play',
+        url: '/play',
         cache: false,
         success: function(data) {},
     });
+```
 
-    // Play a file
+Play a given file
+```javascript
     $.ajax({
         type: 'POST',
-        url: '/mipod/play',
+        url: '/play',
         data: JSON.stringify({entry: "some/music/file.mp3"}),
         contentType: "application/json; charset=utf-8",
         success: function(data) {},
     });
+```
 
-    // Load library
-    $.get("/mipod/loadonce", function(data) {
+Load the full library
+```javascript
+    $.get("/lib-loadonce", function(data) {
         loadPage({
             start: 0,
             count: 1000
@@ -142,7 +149,7 @@ The available names are:
     }, 'json');
 
     function loadPage(loadingInfo) {
-        $.post('/mipod/get/' + loadingInfo.start + '/' + loadingInfo.count, {},
+        $.post('/lib-get/' + loadingInfo.start + '/' + loadingInfo.count, {},
             function(pageInfo) {
                 // Process data (add "pageInfo.data" to client layout)
                 if (pageInfo.finished) {
@@ -164,6 +171,46 @@ The available names are:
 ```
 
 ### Websocket
+
+Initializing socket.io
+
+```javascript
+    var socket = io();
+```
+
+Swith to play mode
+```javascript
+    socket.emit("play");
+```
+
+Play a given file
+```javascript
+    socket.emit("play-entry", {entry: "some/music/file.mp3"});
+```
+
+Load the full library (push mode)
+```javascript
+    function startLoading() {
+        socket.emit("lib-push", {
+            maxBatchSize: 500,
+            treeDesc: ["genre", "albumArtist|artist", "album"],
+            leafDesc: ["file","track","title"]
+        });
+        socket.emit("lib-loadonce");
+    }
+
+    // Register listeners
+    socket.on("lib-finished-loading", function(body) {
+        console.log("Finished to scan " + body.nbItems + " items");
+    });
+
+    socket.on("lib-push", function(body) {
+        console.log("Scanned " + body.progress + " items");
+        // Process data (add "body.data" to client layout)
+    });
+    
+```
+
 
 ## License
 Copyright 2014 Joël Takvorian, [MIT License](https://github.com/jotak/mipod/blob/master/LICENSE)
