@@ -437,15 +437,18 @@ function organizer(flat: SongInfo[], tags: ThemeTags, treeDescriptor: string[], 
             treePtr = treePtr[valueForKey].mpd;
             depth++;
         });
+        var leaf: any = {};
         if (leafDescriptor) {
-            var leaf = {};
             leafDescriptor.forEach(function(key: string) {
                 leaf[key] = song[key];
             });
-            treePtr.push(leaf);
         } else {
-            treePtr.push(song);
+            leaf = song;
         }
+        if (tags["song"] && tags["song"][song.file]) {
+            leaf.tags = tags["song"][song.file];
+        }
+        treePtr.push(leaf);
     });
     return {root: tree};
 }
