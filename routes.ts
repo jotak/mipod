@@ -228,6 +228,13 @@ export function register(app: express.Application, prefix: string, library: Libr
         }
     });
 
+    httpDelete('/tag/:tagName', function(req, res) {
+        var tagName: string = req.params.tagName;
+        if (check("{targets: [{targetType: String, target: String}]}", req.body, res)) {
+            answerOnPromise(library.deleteTag(tagName, req.body.targets), res);
+        }
+    });
+
     app.get(prefix + '/', function(req, res) {
         var resp: string = "Available resources: <br/><ul>";
         for (var i in routes) {

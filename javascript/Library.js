@@ -236,6 +236,31 @@ var Loader = (function () {
         return deferred.promise;
     };
 
+    Loader.prototype.deleteTag = function (tagName, targets) {
+        if (!this.allLoaded) {
+            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
+        }
+        for (var i = 0; i < targets.length; i++) {
+            if (this.tags.hasOwnProperty(targets[i].targetType) && this.tags[targets[i].targetType].hasOwnProperty(targets[i].target) && this.tags[targets[i].targetType][targets[i].target].hasOwnProperty(tagName)) {
+                delete this.tags[targets[i].targetType][targets[i].target][tagName];
+                if (Object.keys(this.tags[targets[i].targetType][targets[i].target]).length === 0) {
+                    delete this.tags[targets[i].targetType][targets[i].target];
+                    if (Object.keys(this.tags[targets[i].targetType]).length === 0) {
+                        delete this.tags[targets[i].targetType];
+                    }
+                }
+            }
+        }
+        var deferred = q.defer();
+        LibCache.saveTags(this.tagsFile(), this.tags).then(function () {
+            deferred.resolve("Tag succesfully deleted");
+        }).fail(function (reason) {
+            console.log("Cache not saved: " + reason.message);
+            deferred.reject(reason);
+        });
+        return deferred.promise;
+    };
+
     Loader.prototype.cacheFile = function () {
         return this.dataPath + "/libcache.json";
     };

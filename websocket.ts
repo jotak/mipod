@@ -238,4 +238,10 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
             }
         }
     });
+
+    socket.on(word("deltag"), function(body) {
+        if (check("{tagName: String, targets: [{targetType: String, target: String}]}", body, socket, word("deltag"))) {
+            answerOnPromise(library.deleteTag(body.tagName, body.targets), socket, word("deltag"), body);
+        }
+    });
 }

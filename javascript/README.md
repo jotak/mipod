@@ -15,7 +15,7 @@ You can either [grab the sources from github](https://github.com/jotak/mipod/):
 
 *Note that it contains both Typescript sources and [generated Javascript](https://github.com/jotak/mipod/tree/master/javascript)*
 
-or you can install through NPM:
+or you can [install through NPM](https://www.npmjs.org/package/mipod):
 
 * **npm install mipod**
 
@@ -125,6 +125,7 @@ or do the equivalent in Javascript:
 | List directory | POST _{path: String, leafDesc: Maybe [String]}_ **/lsinfo** | **lsinfo** {token: Maybe Number, path: String, leafDesc: Maybe [String]} | An equivalent method of "lib-get" that returns only a flat reprensentation of a given path. If a token was provided, it's returned in response event (Websocket only).
 | Search | POST _{search: String, leafDesc: Maybe [String]}_ **/search/:mode** | **search** {token: Maybe Number, mode: String, search: String, leafDesc: Maybe [String]} | Search for an MPD entry matching posted given string. "mode" can be any type od data recognized by MPD (check MPD documentation), for instance "file" or "any". If a token was provided, it's returned in response event (Websocket only).
 | Tag | POST _{targets: [{targetType: String, target: String}]}_ **/tag/:tagName/:tagValue?** | **tag** {tagName: String, tagValue: String, targets: [{targetType: String, target: String}]} | Get (if tagValue undefined) or set (if tagValue defined) a custom tag associated to a given target. Expecting POST data: <ul><li>"targetType" refers to a MPD tag (song, artist, album etc.)</li><li>"target" depends on "targetType": for a song, will be the MPD path for instance</li></ul>On websockets, the context parameters are returned in the response event.
+| Delete tag | DELETE _{targets: [{targetType: String, target: String}]}_ **/tag/:tagName** | **deltag** {tagName: String, targets: [{targetType: String, target: String}]} | Delete a given tag. Expecting JSON: <ul><li>"targetType" refers to a MPD tag (song, artist, album etc.)</li><li>"target" depends on "targetType": for a song, will be the MPD path for instance</li></ul>On websockets, the context parameters are returned in the response event.
 
 ### Tree and leaf descriptors
 Some commands sent to MPD will return a list of entries, which are basically directories, playlist files and song files with metadata. **Mipod has the ability to organize them the way you want**. You would like sometimes to get them as flat lists, or as trees organized by albums, artists, etc. That's what treeDesc and leafDesc are for.

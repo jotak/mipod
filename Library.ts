@@ -269,6 +269,33 @@ export class Loader {
         return deferred.promise;
     }
 
+    public deleteTag(tagName: string, targets: TagTarget[]): q.Promise<string> {
+        if (!this.allLoaded) {
+            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
+        }
+        for (var i = 0; i < targets.length; i++) {
+            if (this.tags.hasOwnProperty(targets[i].targetType)
+                    && this.tags[targets[i].targetType].hasOwnProperty(targets[i].target)
+                    && this.tags[targets[i].targetType][targets[i].target].hasOwnProperty(tagName)) {
+                delete this.tags[targets[i].targetType][targets[i].target][tagName];
+                if (Object.keys(this.tags[targets[i].targetType][targets[i].target]).length === 0) {
+                    delete this.tags[targets[i].targetType][targets[i].target];
+                    if (Object.keys(this.tags[targets[i].targetType]).length === 0) {
+                        delete this.tags[targets[i].targetType];
+                    }
+                }
+            }
+        }
+        var deferred: q.Deferred<string> = q.defer<string>();
+        LibCache.saveTags(this.tagsFile(), this.tags).then(function() {
+            deferred.resolve("Tag succesfully deleted");
+        }).fail(function(reason: Error) {
+            console.log("Cache not saved: " + reason.message);
+            deferred.reject(reason);
+        });
+        return deferred.promise;
+    }
+
     private cacheFile(): string {
         return this.dataPath + "/libcache.json";
     }

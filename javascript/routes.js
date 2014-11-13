@@ -215,6 +215,13 @@ function register(app, prefix, library) {
         }
     });
 
+    httpDelete('/tag/:tagName', function (req, res) {
+        var tagName = req.params.tagName;
+        if (check("{targets: [{targetType: String, target: String}]}", req.body, res)) {
+            answerOnPromise(library.deleteTag(tagName, req.body.targets), res);
+        }
+    });
+
     app.get(prefix + '/', function (req, res) {
         var resp = "Available resources: <br/><ul>";
         for (var i in routes) {
