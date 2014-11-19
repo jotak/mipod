@@ -21,6 +21,7 @@ SOFTWARE.
 /// <reference path="type-check/type-check.d.ts" />
 
 import Library = require('./Library');
+import MpdStatus = require('./MpdStatus');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
@@ -172,6 +173,22 @@ export function register(app: express.Application, prefix: string, library: Libr
             MpdClient.current().then(MpdEntries.readEntries).then(function(entries: MpdEntry[]) {
                 return entries.length === 0 ? {} : entries[0];
             }), res);
+    });
+
+    httpGet('/idle', function(req, res) {
+        answerOnPromise(MpdClient.idle(), res);
+    });
+
+    httpGet('/status', function(req, res) {
+        answerOnPromise(MpdClient.status().then(MpdStatus.parse), res);
+    });
+
+    httpGet('/playlistInfo/:idx?', function(req, res) {
+        if (req.params.idx) {
+            answerOnPromise(MpdClient.playlistInfoIdx(+req.params.idx), res);
+        } else {
+            answerOnPromise(MpdClient.playlistInfo(), res);
+        }
     });
 
     httpGet('/custom/:command', function(req, res) {

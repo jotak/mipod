@@ -17,6 +17,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+var MpdStatus = require('./MpdStatus');
 var MpdEntries = require('./MpdEntries');
 
 var MpdClient = require('./MpdClient');
@@ -159,6 +160,22 @@ function register(app, prefix, library) {
         answerOnPromise(MpdClient.current().then(MpdEntries.readEntries).then(function (entries) {
             return entries.length === 0 ? {} : entries[0];
         }), res);
+    });
+
+    httpGet('/idle', function (req, res) {
+        answerOnPromise(MpdClient.idle(), res);
+    });
+
+    httpGet('/status', function (req, res) {
+        answerOnPromise(MpdClient.status().then(MpdStatus.parse), res);
+    });
+
+    httpGet('/playlistInfo/:idx?', function (req, res) {
+        if (req.params.idx) {
+            answerOnPromise(MpdClient.playlistInfoIdx(+req.params.idx), res);
+        } else {
+            answerOnPromise(MpdClient.playlistInfo(), res);
+        }
     });
 
     httpGet('/custom/:command', function (req, res) {

@@ -199,6 +199,22 @@ var MpdClient = (function () {
         return MpdClient.exec("currentsong");
     };
 
+    MpdClient.status = function () {
+        return MpdClient.exec("status");
+    };
+
+    MpdClient.idle = function () {
+        return MpdClient.exec("idle");
+    };
+
+    MpdClient.playlistInfo = function () {
+        return MpdClient.exec("playlistinfo");
+    };
+
+    MpdClient.playlistInfoIdx = function (idx) {
+        return MpdClient.exec("playlistinfo " + idx);
+    };
+
     MpdClient.custom = function (cmd) {
         return MpdClient.exec(cmd);
     };

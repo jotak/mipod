@@ -21,6 +21,7 @@ SOFTWARE.
 /// <reference path="type-check/type-check.d.ts" />
 
 import Library = require('./Library');
+import MpdStatus = require('./MpdStatus');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
@@ -170,6 +171,20 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
             }), socket, word("current"));
     });
 
+    socket.on(word("status"), function() {
+        answerOnPromise(MpdClient.status().then(MpdStatus.parse), socket, word("status"));
+    });
+
+    socket.on(word("idle"), function() {
+        answerOnPromise(MpdClient.idle(), socket, word("idle"));
+    });
+
+    socket.on(word("notify"), function() {
+        // Send initial notification right now, then enter idle loop
+        answerOnPromise(MpdClient.status().then(MpdStatus.parse), socket, word("notify"));
+        idleLoop(socket, word("notify"));
+    });
+
     socket.on(word("custom"), function(body) {
         if (check("{command: String}", body, socket, word("custom"))) {
             answerOnPromise(MpdClient.custom(body.command), socket, word("custom"));
@@ -244,4 +259,12 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
             answerOnPromise(library.deleteTag(body.tagName, body.targets), socket, word("deltag"), body);
         }
     });
+}
+
+function idleLoop(socket: socketio.Socket, word: string) {
+    answerOnPromise(
+        MpdClient.idle().then(MpdClient.status).then(MpdStatus.parse).then(function(json) {
+            idleLoop(socket, word);
+            return json;
+        }), socket, word);
 }

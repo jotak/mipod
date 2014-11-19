@@ -17,6 +17,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+var MpdStatus = require('./MpdStatus');
 var MpdEntries = require('./MpdEntries');
 
 var MpdClient = require('./MpdClient');
@@ -166,6 +167,20 @@ function register(socket, prefix, library) {
         }), socket, word("current"));
     });
 
+    socket.on(word("status"), function () {
+        answerOnPromise(MpdClient.status().then(MpdStatus.parse), socket, word("status"));
+    });
+
+    socket.on(word("idle"), function () {
+        answerOnPromise(MpdClient.idle(), socket, word("idle"));
+    });
+
+    socket.on(word("notify"), function () {
+        // Send initial notification right now, then enter idle loop
+        answerOnPromise(MpdClient.status().then(MpdStatus.parse), socket, word("notify"));
+        idleLoop(socket, word("notify"));
+    });
+
     socket.on(word("custom"), function (body) {
         if (check("{command: String}", body, socket, word("custom"))) {
             answerOnPromise(MpdClient.custom(body.command), socket, word("custom"));
@@ -238,3 +253,10 @@ function register(socket, prefix, library) {
     });
 }
 exports.register = register;
+
+function idleLoop(socket, word) {
+    answerOnPromise(MpdClient.idle().then(MpdClient.status).then(MpdStatus.parse).then(function (json) {
+        idleLoop(socket, word);
+        return json;
+    }), socket, word);
+}

@@ -115,6 +115,11 @@ or do the equivalent in Javascript:
 | Add all | POST _{entries: [String]}_ **/addall** | **addal** {entries: [String]} | Add all songs / playlists from json to current playlist
 | Update | POST _{path: String}_ **/update** | **update** {path: String} | Update MPD database on given path (empty path = whole db)
 | Current | GET **/current** | **current** | Get current song info being played
+| Status | GET **/status** | **status** | Get current status (various information, such as active flags, current song id, bitrate, etc.)
+| Idle | GET **/idle** | **idle** | Wait until an event occurs
+| Notify | n/a | **notify** | Get status information right now (same as "status"), and get notified each time something changed. It's a combination of "idle" and "status" run in loop.
+| Playlist info | GET **/playlistInfo** | **playlistInfo (n/a yet!)** | Get current playlist content
+| Playlist item info | GET **/playlistInfo/:idx** | **playlistItemInfo {idx: Number} (n/a yet!)** | Get information on a specific item in current playlist
 | Custom | GET **/custom/:command** | **custom** {command: String} | Run a custom MPD command
 | Load lib once | GET **/lib-loadonce** | **lib-loadonce** | Trigger library scan, which will put result in cache and available for "get" calls
 | Reload lib | GET **/lib-reload** | **lib-reload** | Force rescanning the library (clears cache)

@@ -205,6 +205,22 @@ class MpdClient {
         return MpdClient.exec("currentsong");
     }
 
+    static status(): q.Promise<string> {
+        return MpdClient.exec("status");
+    }
+
+    static idle(): q.Promise<string> {
+        return MpdClient.exec("idle");
+    }
+
+    static playlistInfo(): q.Promise<string> {
+        return MpdClient.exec("playlistinfo");
+    }
+
+    static playlistInfoIdx(idx: number): q.Promise<string> {
+        return MpdClient.exec("playlistinfo " + idx);
+    }
+
     static custom(cmd: string): q.Promise<string> {
         return MpdClient.exec(cmd);
     }
