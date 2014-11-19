@@ -62,9 +62,9 @@ function register(socket, prefix, library) {
         }
     });
 
-    socket.on(word("add-entry"), function (body) {
-        if (check("{entry: String}", body, socket, word("add-entry"))) {
-            answerOnPromise(MpdClient.add(body.entry), socket, word("add-entry"));
+    socket.on(word("add"), function (body) {
+        if (check("{entry: String}", body, socket, word("add"))) {
+            answerOnPromise(MpdClient.add(body.entry), socket, word("add"));
         }
     });
 
