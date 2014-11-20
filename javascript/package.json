@@ -1,6 +1,6 @@
 {
   "name": "mipod",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A node module for exposing an MPD API, either as REST service, as Websocket or as a library to include. Written in Typescript, executed in Javascript.",
   "homepage": "https://github.com/jotak/mipod",
   "author": "Joël Takvorian <joel.takvorian@qaraywa.net> (https://github.com/jotak)",
