@@ -178,8 +178,21 @@ function register(app, prefix, library) {
         }
     });
 
-    httpGet('/custom/:command', function (req, res) {
-        answerOnPromise(MpdClient.custom(req.params.command), res);
+    httpPost('/custom', function (req, res) {
+        if (check("{command: String, stopper: Maybe String, parser: Maybe String}", req.body, res)) {
+            MpdClient.custom(req.body.command, req.body.stopper).then(function (mpdResponse) {
+                var response = mpdResponse;
+                if (req.body.parser === "entries") {
+                    response = MpdEntries.readEntries(mpdResponse);
+                } else if (req.body.parser === "status") {
+                    response = MpdStatus.parse(mpdResponse);
+                }
+                res.send(response);
+            }).fail(function (reason) {
+                console.log("Application error: " + reason.message);
+                res.status(500).send(String(reason));
+            }).done();
+        }
     });
 
     httpGet('/lib-loadonce', function (req, res) {

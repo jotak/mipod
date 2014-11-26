@@ -21,50 +21,105 @@ SOFTWARE.
 var net = require('net');
 var q = require('q');
 
+var SocketListeners = (function () {
+    function SocketListeners(socket, callbacks) {
+        this.callbacks = callbacks;
+        SocketListeners.connect(socket, callbacks);
+    }
+    SocketListeners.prototype.reconnect = function (socket, callbacks) {
+        SocketListeners.disconnect(socket, this.callbacks);
+        this.callbacks = callbacks;
+        SocketListeners.connect(socket, callbacks);
+    };
+
+    SocketListeners.connect = function (socket, callbacks) {
+        socket.on('data', callbacks.dataListener);
+        socket.on('end', callbacks.endListener);
+        socket.on('timeout', callbacks.timeoutListener);
+        socket.on('error', callbacks.errorListener);
+    };
+
+    SocketListeners.disconnect = function (socket, callbacks) {
+        socket.removeListener('data', callbacks.dataListener);
+        socket.removeListener('end', callbacks.endListener);
+        socket.removeListener('timeout', callbacks.timeoutListener);
+        socket.removeListener('error', callbacks.errorListener);
+    };
+    return SocketListeners;
+})();
+
 "use strict";
 var MpdClient = (function () {
-    function MpdClient(cmd, stopper) {
-        this.ack = false;
-        this.deferred = q.defer();
-        this.cmd = cmd + "\n";
-        this.socket = net.createConnection(MpdClient.port, MpdClient.host);
-        var that = this;
-        var response = "";
-        this.socket.on('data', function (data) {
-            if (that.ack) {
-                response += String(data);
-                if (!stopper || response.indexOf(stopper, response.length - stopper.length) !== -1) {
-                    that.socket.destroy();
-                    that.deferred.resolve(response.trim());
-                }
-            } else {
-                that.ack = true;
-                that.socket.write(that.cmd);
-            }
-        }).on('end', function () {
-            that.socket.destroy();
-            that.deferred.resolve("");
-        }).on('timeout', function () {
-            that.socket.destroy();
-            that.deferred.reject(new Error("Socket timeout"));
-        }).on('error', function (err) {
-            that.socket.destroy();
-            that.deferred.reject(new Error(err));
-        });
+    function MpdClient() {
     }
     MpdClient.configure = function (host, port) {
         this.host = host;
         this.port = port;
     };
 
-    MpdClient.exec = function (cmd, stopper) {
-        console.log(cmd);
-        var mpd = new MpdClient(cmd, stopper);
-        return mpd.deferred.promise;
+    MpdClient.prototype.connect = function () {
+        var deferred = q.defer();
+        this.socket = net.createConnection(MpdClient.port, MpdClient.host);
+        var that = this;
+        this.listeners = new SocketListeners(this.socket, {
+            dataListener: function (data) {
+                deferred.resolve(null);
+            },
+            endListener: function () {
+                that.close();
+                deferred.reject(new Error("Unexpected ending"));
+            },
+            timeoutListener: function () {
+                that.close();
+                deferred.reject(new Error("Socket timeout"));
+            },
+            errorListener: function (err) {
+                that.close();
+                deferred.reject(new Error(err));
+            }
+        });
+        return deferred.promise;
+    };
+
+    MpdClient.prototype.close = function () {
+        this.socket.destroy();
+    };
+
+    MpdClient.prototype.exec = function (cmd, stopper) {
+        var deferred = q.defer();
+        var response = "";
+        this.listeners.reconnect(this.socket, {
+            dataListener: function (data) {
+                response += String(data);
+                if (!stopper || response.indexOf(stopper, response.length - stopper.length) !== -1) {
+                    deferred.resolve(response.trim());
+                }
+            },
+            endListener: function () {
+                deferred.resolve("");
+            },
+            timeoutListener: function () {
+                deferred.reject(new Error("Socket timeout"));
+            },
+            errorListener: function (err) {
+                deferred.reject(new Error(err));
+            }
+        });
+        this.socket.write(cmd + "\n");
+        return deferred.promise;
+    };
+
+    MpdClient.execAndClose = function (cmd, stopper) {
+        var mpdClient = new MpdClient();
+        return mpdClient.connect().then(function () {
+            return mpdClient.exec(cmd, stopper);
+        }).fin(function () {
+            mpdClient.close();
+        });
     };
 
     MpdClient.play = function () {
-        return MpdClient.exec("play");
+        return MpdClient.execAndClose("play");
     };
 
     MpdClient.playEntry = function (path) {
@@ -74,37 +129,56 @@ var MpdClient = (function () {
     };
 
     MpdClient.playIdx = function (idx) {
-        return MpdClient.exec("play " + idx);
+        return MpdClient.execAndClose("play " + idx);
     };
 
     MpdClient.pause = function () {
-        return MpdClient.exec("pause");
+        return MpdClient.execAndClose("pause");
     };
 
     MpdClient.stop = function () {
-        return MpdClient.exec("stop");
+        return MpdClient.execAndClose("stop");
     };
 
     MpdClient.prev = function () {
-        return MpdClient.exec("previous");
+        return MpdClient.execAndClose("previous");
     };
 
     MpdClient.next = function () {
-        return MpdClient.exec("next");
+        return MpdClient.execAndClose("next");
     };
 
     MpdClient.clear = function () {
-        return MpdClient.exec("clear");
+        return MpdClient.execAndClose("clear");
     };
 
-    MpdClient.add = function (uri) {
+    MpdClient.getAddCommand = function (uri) {
         var cmd = "add";
 
         // Playlists need to be "loaded" instead of "added"
         if (uri.indexOf(".m3u") >= 0 || uri.indexOf(".pls") >= 0 || uri.indexOf("/") < 0) {
             cmd = "load";
         }
-        return MpdClient.exec(cmd + " \"" + uri + "\"").then(function (response) {
+        return cmd;
+    };
+
+    MpdClient.add = function (uri) {
+        var cmd = MpdClient.getAddCommand(uri);
+        return MpdClient.execAndClose(cmd + " \"" + uri + "\"").then(function (response) {
+            if (response == "OK") {
+                return response;
+            } else {
+                throw new Error(response);
+            }
+        });
+    };
+
+    /**
+    * Non-static version; use the existing connection to MPD for adding
+    */
+    MpdClient.prototype.add = function (uri) {
+        var cmd = MpdClient.getAddCommand(uri);
+        return this.exec(cmd + " \"" + uri + "\"").then(function (response) {
             if (response == "OK") {
                 return response;
             } else {
@@ -114,49 +188,53 @@ var MpdClient = (function () {
     };
 
     MpdClient.volume = function (value) {
-        return MpdClient.exec("setvol " + value);
+        return MpdClient.execAndClose("setvol " + value);
     };
 
     MpdClient.repeat = function (enabled) {
-        return MpdClient.exec("repeat " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("repeat " + (enabled ? "1" : "0"));
     };
 
     MpdClient.random = function (enabled) {
-        return MpdClient.exec("random " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("random " + (enabled ? "1" : "0"));
     };
 
     MpdClient.single = function (enabled) {
-        return MpdClient.exec("single " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("single " + (enabled ? "1" : "0"));
     };
 
     MpdClient.consume = function (enabled) {
-        return MpdClient.exec("consume " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("consume " + (enabled ? "1" : "0"));
     };
 
     MpdClient.seek = function (songIdx, posInSong) {
-        return MpdClient.exec("seek " + songIdx + " " + posInSong);
+        return MpdClient.execAndClose("seek " + songIdx + " " + posInSong);
     };
 
     MpdClient.removeFromQueue = function (songIdx) {
-        return MpdClient.exec("delete " + songIdx);
+        return MpdClient.execAndClose("delete " + songIdx);
     };
 
     MpdClient.deleteList = function (name) {
-        return MpdClient.exec("rm \"" + name + "\"");
+        return MpdClient.execAndClose("rm \"" + name + "\"");
     };
 
     MpdClient.saveList = function (name) {
         return MpdClient.deleteList(name).then(function (res) {
-            return MpdClient.exec("save \"" + name + "\"");
+            return MpdClient.execAndClose("save \"" + name + "\"");
         });
     };
 
     MpdClient.lsinfo = function (dir) {
-        return MpdClient.exec("lsinfo \"" + dir + "\"", "\nOK\n");
+        return MpdClient.execAndClose("lsinfo \"" + dir + "\"", "\nOK\n");
+    };
+
+    MpdClient.prototype.lsinfo = function (dir) {
+        return this.exec("lsinfo \"" + dir + "\"", "\nOK\n");
     };
 
     MpdClient.search = function (mode, searchstr) {
-        return MpdClient.exec("search " + mode + " \"" + searchstr + "\"", "\nOK\n");
+        return MpdClient.execAndClose("search " + mode + " \"" + searchstr + "\"", "\nOK\n");
     };
 
     MpdClient.playAll = function (allPaths) {
@@ -172,51 +250,72 @@ var MpdClient = (function () {
         });
     };
 
+    /**
+    * Static version; create and use a single connection to MPD for all elements to add
+    */
     MpdClient.addAll = function (allPaths) {
         if (allPaths.length == 0) {
             return q.fcall(function () {
                 return "OK";
             });
         }
-        return MpdClient.add(allPaths[0]).then(function (tmpResponse) {
-            return MpdClient.addAll(allPaths.slice(1));
+        var mpdClient = new MpdClient();
+        return mpdClient.connect().then(function () {
+            return mpdClient.addAll(allPaths);
+        }).fin(function () {
+            mpdClient.close();
+        });
+    };
+
+    /**
+    * Non-static version; use an existing single connection to MPD for all elements to add
+    */
+    MpdClient.prototype.addAll = function (allPaths) {
+        if (allPaths.length == 0) {
+            return q.fcall(function () {
+                return "OK";
+            });
+        }
+        var that = this;
+        return this.add(allPaths[0]).then(function (whatever) {
+            return that.addAll(allPaths.slice(1));
         });
     };
 
     MpdClient.update = function (uri) {
-        return MpdClient.exec("update \"" + uri + "\"");
+        return MpdClient.execAndClose("update \"" + uri + "\"");
     };
 
     MpdClient.rate = function (uri, rate) {
-        return MpdClient.exec("sticker set song \"" + uri + "\" rating " + rate);
+        return MpdClient.execAndClose("sticker set song \"" + uri + "\" rating " + rate);
     };
 
     MpdClient.getRate = function (uri) {
-        return MpdClient.exec("sticker get song \"" + uri + "\" rating");
+        return MpdClient.execAndClose("sticker get song \"" + uri + "\" rating");
     };
 
     MpdClient.current = function () {
-        return MpdClient.exec("currentsong");
+        return MpdClient.execAndClose("currentsong");
     };
 
     MpdClient.status = function () {
-        return MpdClient.exec("status");
+        return MpdClient.execAndClose("status");
     };
 
     MpdClient.idle = function () {
-        return MpdClient.exec("idle");
+        return MpdClient.execAndClose("idle");
     };
 
     MpdClient.playlistInfo = function () {
-        return MpdClient.exec("playlistinfo");
+        return MpdClient.execAndClose("playlistinfo");
     };
 
     MpdClient.playlistInfoIdx = function (idx) {
-        return MpdClient.exec("playlistinfo " + idx);
+        return MpdClient.execAndClose("playlistinfo " + idx);
     };
 
-    MpdClient.custom = function (cmd) {
-        return MpdClient.exec(cmd);
+    MpdClient.custom = function (cmd, stopper) {
+        return MpdClient.execAndClose(cmd, stopper);
     };
     MpdClient.host = "localhost";
     MpdClient.port = 6600;

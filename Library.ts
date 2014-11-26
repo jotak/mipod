@@ -41,6 +41,7 @@ interface ParserInfo {
     songs: SongInfo[];
     lines: string[];
     cursor: number;
+    mpd: MpdClient;
 }
 
 class LoadingListener {
@@ -173,12 +174,30 @@ export class Loader {
         }
     }
 
-    public forceRefresh(): string {
+    public clearCache(): q.Promise<void> {
+        var deferred: q.Deferred<void> = q.defer<void>();
         this.allLoaded = false;
         this.loadingCounter = 0;
         this.mpdContent = [];
         this.tags = {};
-        this.loadAllLib();
+        if (this.useCacheFile) {
+            LibCache.saveCache(this.cacheFile(), this.mpdContent).then(function() {
+                deferred.resolve(null);
+            }).fail(function(reason: Error) {
+                console.log("Cache not saved: " + reason.message);
+                deferred.reject(reason);
+            });
+        } else {
+            deferred.resolve(null);
+        }
+        return deferred.promise;
+    }
+
+    public forceRefresh(): string {
+        var that = this;
+        this.clearCache().then(function() {
+            that.loadAllLib();
+        }).done();
         return "OK";
     }
 
@@ -305,8 +324,14 @@ export class Loader {
     }
 
     private loadAllLib() {
+        var start = new Date().getTime();
         var that = this;
-        this.loadDirForLib(this.mpdContent, "").then(function() {
+        var mpdClient: MpdClient = new MpdClient();
+        mpdClient.connect().then(function() {
+            return that.loadDirForLib(mpdClient, that.mpdContent, "");
+        }).then(function() {
+            var elapsed = new Date().getTime() - start;
+            console.log("finished in " + elapsed / 1000 + " seconds");
             that.allLoaded = true;
             if (that.loadingListener) {
                 that.loadingListener.setTotalItems(that.mpdContent.length);
@@ -316,15 +341,17 @@ export class Loader {
                     console.log("Cache not saved: " + reason.message);
                 });
             }
+        }).fin(function() {
+            mpdClient.close();
         }).done();
     }
 
-    private loadDirForLib(songs: SongInfo[], dir: string): q.Promise<ParserInfo> {
+    private loadDirForLib(mpd: MpdClient, songs: SongInfo[], dir: string): q.Promise<ParserInfo> {
         var that = this;
-        return MpdClient.lsinfo(dir)
+        return mpd.lsinfo(dir)
             .then(function(response: string) {
                 var lines: string[] = response.split("\n");
-                return that.parseNext({ songs: songs, lines: lines, cursor: 0 });
+                return that.parseNext({ mpd: mpd, songs: songs, lines: lines, cursor: 0 });
             });
     }
 
@@ -377,10 +404,10 @@ export class Loader {
                 currentSong !== null && this.collect(currentSong);
                 currentSong = null;
                 // Load (async) the directory content, and then only continue on parsing what remains here
-                return this.loadDirForLib(parser.songs, entry.value)
+                return this.loadDirForLib(parser.mpd, parser.songs, entry.value)
                     .then(function(subParser: ParserInfo) {
                         // this "subParser" contains gathered songs, whereas the existing "parser" contains previous cursor information that we need to continue on this folder
-                        return that.parseNext({ songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
+                        return that.parseNext({ mpd: subParser.mpd, songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
                     });
             } else if (entry.key === "playlist") {
                 // skip

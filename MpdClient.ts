@@ -24,40 +24,45 @@ import q = require('q');
 import MpdEntry = require('./libtypes/MpdEntry');
 import SongInfo = require('./libtypes/SongInfo');
 
+interface ISocketListeners {
+    dataListener: (data)=>void;
+    endListener: ()=>void;
+    timeoutListener: ()=>void;
+    errorListener: (err)=>void;
+}
+
+class SocketListeners {
+    private callbacks: ISocketListeners;
+    constructor(socket: net.Socket, callbacks: ISocketListeners) {
+        this.callbacks = callbacks;
+        SocketListeners.connect(socket, callbacks);
+    }
+
+    public reconnect(socket: net.Socket, callbacks: ISocketListeners) {
+        SocketListeners.disconnect(socket, this.callbacks);
+        this.callbacks = callbacks;
+        SocketListeners.connect(socket, callbacks);
+    }
+
+    private static connect(socket: net.Socket, callbacks: ISocketListeners) {
+        socket.on('data', callbacks.dataListener);
+        socket.on('end', callbacks.endListener);
+        socket.on('timeout', callbacks.timeoutListener);
+        socket.on('error', callbacks.errorListener);
+    }
+
+    private static disconnect(socket: net.Socket, callbacks: ISocketListeners) {
+        socket.removeListener('data', callbacks.dataListener);
+        socket.removeListener('end', callbacks.endListener);
+        socket.removeListener('timeout', callbacks.timeoutListener);
+        socket.removeListener('error', callbacks.errorListener);
+    }
+}
+
 "use strict";
 class MpdClient {
-    ack: boolean = false;
-    deferred: q.Deferred<string> = q.defer<string>();
-    cmd: string;
-    socket;
-
-    constructor(cmd: string, stopper?: string) {
-        this.cmd = cmd + "\n";
-        this.socket = net.createConnection(MpdClient.port, MpdClient.host);
-        var that = this;
-        var response: string = "";
-        this.socket.on('data', function(data) {
-            if (that.ack) {
-                response += String(data);
-                if (!stopper || response.indexOf(stopper, response.length - stopper.length) !== -1) {
-                    that.socket.destroy();
-                    that.deferred.resolve(response.trim());
-                }
-            } else {
-                that.ack = true;
-                that.socket.write(that.cmd);
-            }
-        }).on('end', function() {
-            that.socket.destroy();
-            that.deferred.resolve("");
-        }).on('timeout', function() {
-            that.socket.destroy();
-            that.deferred.reject(new Error("Socket timeout"));
-        }).on('error', function(err) {
-            that.socket.destroy();
-            that.deferred.reject(new Error(err));
-        });
-    }
+    private socket: net.Socket;
+    private listeners: SocketListeners;
 
     // Some static stuff
     private static host: string = "localhost";
@@ -67,14 +72,69 @@ class MpdClient {
         this.port = port;
     }
 
-    private static exec(cmd: string, stopper?: string): q.Promise<string> {
-        console.log(cmd);
-        var mpd = new MpdClient(cmd, stopper);
-        return mpd.deferred.promise;
+    public connect(): q.Promise<void> {
+        var deferred: q.Deferred<void> = q.defer<void>();
+        this.socket = net.createConnection(MpdClient.port, MpdClient.host);
+        var that = this;
+        this.listeners = new SocketListeners(this.socket, {
+            dataListener: function(data) {
+                deferred.resolve(null);
+            },
+            endListener: function() {
+                that.close();
+                deferred.reject(new Error("Unexpected ending"));
+            },
+            timeoutListener: function() {
+                that.close();
+                deferred.reject(new Error("Socket timeout"));
+            },
+            errorListener: function(err) {
+                that.close();
+                deferred.reject(new Error(err));
+            }
+        });
+        return deferred.promise;
+    }
+
+    public close() {
+        this.socket.destroy();
+    }
+
+    private exec(cmd: string, stopper?: string): q.Promise<string> {
+        var deferred: q.Deferred<string> = q.defer<string>();
+        var response: string = "";
+        this.listeners.reconnect(this.socket, {
+            dataListener: function(data) {
+                response += String(data);
+                if (!stopper || response.indexOf(stopper, response.length - stopper.length) !== -1) {
+                    deferred.resolve(response.trim());
+                }
+            },
+            endListener: function() {
+                deferred.resolve("");
+            },
+            timeoutListener: function() {
+                deferred.reject(new Error("Socket timeout"));
+            },
+            errorListener: function(err) {
+                deferred.reject(new Error(err));
+            }
+        });
+        this.socket.write(cmd + "\n");
+        return deferred.promise;
+    }
+
+    private static execAndClose(cmd: string, stopper?: string): q.Promise<string> {
+        var mpdClient: MpdClient = new MpdClient();
+        return mpdClient.connect().then(function() {
+            return mpdClient.exec(cmd, stopper);
+        }).fin(function() {
+            mpdClient.close();
+        });
     }
 
     static play(): q.Promise<string> {
-        return MpdClient.exec("play");
+        return MpdClient.execAndClose("play");
     }
 
     static playEntry(path: string): q.Promise<string> {
@@ -84,30 +144,30 @@ class MpdClient {
     }
 
     static playIdx(idx: number): q.Promise<string> {
-        return MpdClient.exec("play " + idx);
+        return MpdClient.execAndClose("play " + idx);
     }
 
     static pause(): q.Promise<string> {
-        return MpdClient.exec("pause");
+        return MpdClient.execAndClose("pause");
     }
 
     static stop(): q.Promise<string> {
-        return MpdClient.exec("stop");
+        return MpdClient.execAndClose("stop");
     }
 
     static prev(): q.Promise<string> {
-        return MpdClient.exec("previous");
+        return MpdClient.execAndClose("previous");
     }
 
     static next(): q.Promise<string> {
-        return MpdClient.exec("next");
+        return MpdClient.execAndClose("next");
     }
 
     static clear(): q.Promise<string> {
-        return MpdClient.exec("clear");
+        return MpdClient.execAndClose("clear");
     }
 
-    static add(uri: string): q.Promise<string> {
+    private static getAddCommand(uri: string): string {
         var cmd: string = "add";
         // Playlists need to be "loaded" instead of "added"
         if (uri.indexOf(".m3u") >= 0
@@ -115,7 +175,26 @@ class MpdClient {
                 || uri.indexOf("/") < 0/*for MPD-created playlists*/) {
             cmd = "load";
         }
-        return MpdClient.exec(cmd + " \"" + uri + "\"").then(function(response: string) {
+        return cmd;
+    }
+
+    static add(uri: string): q.Promise<string> {
+        var cmd: string = MpdClient.getAddCommand(uri);
+        return MpdClient.execAndClose(cmd + " \"" + uri + "\"").then(function(response: string) {
+            if (response == "OK") {
+                return response;
+            } else {
+                throw new Error(response);
+            }
+        });
+    }
+
+    /**
+     * Non-static version; use the existing connection to MPD for adding
+     */
+    public add(uri: string): q.Promise<string> {
+        var cmd: string = MpdClient.getAddCommand(uri);
+        return this.exec(cmd + " \"" + uri + "\"").then(function(response: string) {
             if (response == "OK") {
                 return response;
             } else {
@@ -125,49 +204,53 @@ class MpdClient {
     }
 
     static volume(value: string): q.Promise<string> {
-        return MpdClient.exec("setvol " + value);
+        return MpdClient.execAndClose("setvol " + value);
     }
 
     static repeat(enabled: boolean): q.Promise<string> {
-        return MpdClient.exec("repeat " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("repeat " + (enabled ? "1" : "0"));
     }
 
     static random(enabled: boolean): q.Promise<string> {
-        return MpdClient.exec("random " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("random " + (enabled ? "1" : "0"));
     }
 
     static single(enabled: boolean): q.Promise<string> {
-        return MpdClient.exec("single " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("single " + (enabled ? "1" : "0"));
     }
 
     static consume(enabled: boolean): q.Promise<string> {
-        return MpdClient.exec("consume " + (enabled ? "1" : "0"));
+        return MpdClient.execAndClose("consume " + (enabled ? "1" : "0"));
     }
 
     static seek(songIdx: number, posInSong: number): q.Promise<string> {
-        return MpdClient.exec("seek " + songIdx + " " + posInSong);
+        return MpdClient.execAndClose("seek " + songIdx + " " + posInSong);
     }
 
     static removeFromQueue(songIdx: number): q.Promise<string> {
-        return MpdClient.exec("delete " + songIdx);
+        return MpdClient.execAndClose("delete " + songIdx);
     }
 
     static deleteList(name: string): q.Promise<string> {
-        return MpdClient.exec("rm \"" + name + "\"");
+        return MpdClient.execAndClose("rm \"" + name + "\"");
     }
 
     static saveList(name: string): q.Promise<string> {
         return MpdClient.deleteList(name).then(function(res: string) {
-            return MpdClient.exec("save \"" + name + "\"");
+            return MpdClient.execAndClose("save \"" + name + "\"");
         });
     }
 
     static lsinfo(dir: string): q.Promise<string> {
-        return MpdClient.exec("lsinfo \"" + dir + "\"", "\nOK\n");
+        return MpdClient.execAndClose("lsinfo \"" + dir + "\"", "\nOK\n");
+    }
+
+    public lsinfo(dir: string): q.Promise<string> {
+        return this.exec("lsinfo \"" + dir + "\"", "\nOK\n");
     }
 
     static search(mode: string, searchstr: string): q.Promise<string> {
-        return MpdClient.exec("search " + mode + " \"" + searchstr + "\"", "\nOK\n");
+        return MpdClient.execAndClose("search " + mode + " \"" + searchstr + "\"", "\nOK\n");
     }
 
     static playAll(allPaths: string[]): q.Promise<string> {
@@ -180,49 +263,68 @@ class MpdClient {
         });
     }
 
+    /**
+     * Static version; create and use a single connection to MPD for all elements to add
+     */
     static addAll(allPaths: string[]): q.Promise<string> {
         if (allPaths.length == 0) {
             return q.fcall<string>(function() { return "OK"; });
         }
-        return MpdClient.add(allPaths[0]).then(function(tmpResponse: string) {
-            return MpdClient.addAll(allPaths.slice(1));
+        var mpdClient: MpdClient = new MpdClient();
+        return mpdClient.connect().then(function() {
+            return mpdClient.addAll(allPaths);
+        }).fin(function() {
+            mpdClient.close();
+        });
+    }
+
+    /**
+     * Non-static version; use an existing single connection to MPD for all elements to add
+     */
+    public addAll(allPaths: string[]): q.Promise<string> {
+        if (allPaths.length == 0) {
+            return q.fcall<string>(function() { return "OK"; });
+        }
+        var that = this;
+        return this.add(allPaths[0]).then(function(whatever: string) {
+            return that.addAll(allPaths.slice(1));
         });
     }
 
     static update(uri: string): q.Promise<string> {
-        return MpdClient.exec("update \"" + uri + "\"");
+        return MpdClient.execAndClose("update \"" + uri + "\"");
     }
 
     static rate(uri: string, rate: number): q.Promise<string> {
-        return MpdClient.exec("sticker set song \"" + uri + "\" rating " + rate);
+        return MpdClient.execAndClose("sticker set song \"" + uri + "\" rating " + rate);
     }
 
     static getRate(uri: string): q.Promise<string> {
-        return MpdClient.exec("sticker get song \"" + uri + "\" rating");
+        return MpdClient.execAndClose("sticker get song \"" + uri + "\" rating");
     }
 
     static current(): q.Promise<string> {
-        return MpdClient.exec("currentsong");
+        return MpdClient.execAndClose("currentsong");
     }
 
     static status(): q.Promise<string> {
-        return MpdClient.exec("status");
+        return MpdClient.execAndClose("status");
     }
 
     static idle(): q.Promise<string> {
-        return MpdClient.exec("idle");
+        return MpdClient.execAndClose("idle");
     }
 
     static playlistInfo(): q.Promise<string> {
-        return MpdClient.exec("playlistinfo");
+        return MpdClient.execAndClose("playlistinfo");
     }
 
     static playlistInfoIdx(idx: number): q.Promise<string> {
-        return MpdClient.exec("playlistinfo " + idx);
+        return MpdClient.execAndClose("playlistinfo " + idx);
     }
 
-    static custom(cmd: string): q.Promise<string> {
-        return MpdClient.exec(cmd);
+    static custom(cmd: string, stopper?: string): q.Promise<string> {
+        return MpdClient.execAndClose(cmd, stopper);
     }
 }
 export = MpdClient;

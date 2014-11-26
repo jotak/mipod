@@ -161,6 +161,7 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
 
     socket.on(word("update"), function(body) {
         if (check("{path: String}", body, socket, word("update"))) {
+            library.clearCache();
             answerOnPromise(MpdClient.update(body.path), socket, word("update"));
         }
     });
@@ -186,8 +187,20 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
     });
 
     socket.on(word("custom"), function(body) {
-        if (check("{command: String}", body, socket, word("custom"))) {
-            answerOnPromise(MpdClient.custom(body.command), socket, word("custom"));
+        if (check("{token: Maybe String, command: String, stopper: Maybe String, parser: Maybe String}", body, socket, word("custom"))) {
+            MpdClient.custom(body.command, body.stopper).then(function(mpdResponse: string) {
+                var response = {token: body.token, content: undefined};
+                response.content = mpdResponse;
+                if (body.parser === "entries") {
+                    response.content = MpdEntries.readEntries(mpdResponse);
+                } else if (body.parser === "status") {
+                    response.content = MpdStatus.parse(mpdResponse);
+                }
+                socket.emit(word("custom"), response);
+            }).fail(function(reason: Error) {
+                console.log("Application error: " + reason.message);
+                socket.emit(word("custom"), {failure: String(reason), context: body});
+            }).done();
         }
     });
 
@@ -229,7 +242,7 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
     });
 
     socket.on(word("lsinfo"), function(body) {
-        if (check("{token: Maybe Number, path: String, leafDesc: Maybe [String]}", body, socket, word("lsinfo"))) {
+        if (check("{token: Maybe String, path: String, leafDesc: Maybe [String]}", body, socket, word("lsinfo"))) {
             library.lsInfo(body.path, body.leafDesc).then(function(lstContent: any[]) {
                 socket.emit(word("lsinfo"), {token: body.token, content: lstContent});
             });
@@ -237,7 +250,7 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
     });
 
     socket.on(word("search"), function(body) {
-        if (check("{token: Maybe Number, mode: String, search: String, leafDesc: Maybe [String]}", body, socket, word("search"))) {
+        if (check("{token: Maybe String, mode: String, search: String, leafDesc: Maybe [String]}", body, socket, word("search"))) {
             library.search(body.mode, body.search, body.leafDesc).then(function(lstContent: any[]) {
                 socket.emit(word("search"), {token: body.token, content: lstContent});
             });

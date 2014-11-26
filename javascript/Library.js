@@ -148,12 +148,30 @@ var Loader = (function () {
         }
     };
 
-    Loader.prototype.forceRefresh = function () {
+    Loader.prototype.clearCache = function () {
+        var deferred = q.defer();
         this.allLoaded = false;
         this.loadingCounter = 0;
         this.mpdContent = [];
         this.tags = {};
-        this.loadAllLib();
+        if (this.useCacheFile) {
+            LibCache.saveCache(this.cacheFile(), this.mpdContent).then(function () {
+                deferred.resolve(null);
+            }).fail(function (reason) {
+                console.log("Cache not saved: " + reason.message);
+                deferred.reject(reason);
+            });
+        } else {
+            deferred.resolve(null);
+        }
+        return deferred.promise;
+    };
+
+    Loader.prototype.forceRefresh = function () {
+        var that = this;
+        this.clearCache().then(function () {
+            that.loadAllLib();
+        }).done();
         return "OK";
     };
 
@@ -270,8 +288,14 @@ var Loader = (function () {
     };
 
     Loader.prototype.loadAllLib = function () {
+        var start = new Date().getTime();
         var that = this;
-        this.loadDirForLib(this.mpdContent, "").then(function () {
+        var mpdClient = new MpdClient();
+        mpdClient.connect().then(function () {
+            return that.loadDirForLib(mpdClient, that.mpdContent, "");
+        }).then(function () {
+            var elapsed = new Date().getTime() - start;
+            console.log("finished in " + elapsed / 1000 + " seconds");
             that.allLoaded = true;
             if (that.loadingListener) {
                 that.loadingListener.setTotalItems(that.mpdContent.length);
@@ -281,14 +305,16 @@ var Loader = (function () {
                     console.log("Cache not saved: " + reason.message);
                 });
             }
+        }).fin(function () {
+            mpdClient.close();
         }).done();
     };
 
-    Loader.prototype.loadDirForLib = function (songs, dir) {
+    Loader.prototype.loadDirForLib = function (mpd, songs, dir) {
         var that = this;
-        return MpdClient.lsinfo(dir).then(function (response) {
+        return mpd.lsinfo(dir).then(function (response) {
             var lines = response.split("\n");
-            return that.parseNext({ songs: songs, lines: lines, cursor: 0 });
+            return that.parseNext({ mpd: mpd, songs: songs, lines: lines, cursor: 0 });
         });
     };
 
@@ -342,9 +368,9 @@ var Loader = (function () {
                 currentSong = null;
 
                 // Load (async) the directory content, and then only continue on parsing what remains here
-                return this.loadDirForLib(parser.songs, entry.value).then(function (subParser) {
+                return this.loadDirForLib(parser.mpd, parser.songs, entry.value).then(function (subParser) {
                     // this "subParser" contains gathered songs, whereas the existing "parser" contains previous cursor information that we need to continue on this folder
-                    return that.parseNext({ songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
+                    return that.parseNext({ mpd: subParser.mpd, songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
                 });
             } else if (entry.key === "playlist") {
                 // skip
