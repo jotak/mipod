@@ -113,14 +113,14 @@ or do the equivalent in Javascript:
 | Save playlist | GET **/savelist/:name** | **savelist** {name: String} | Save current playlist with given file name
 | Play all | POST _{entries: [String]}_ **/playall** | **playall** {entries: [String]} | Play all songs / playlists from json (replaces current playlist)
 | Add all | POST _{entries: [String]}_ **/addall** | **addal** {entries: [String]} | Add all songs / playlists from json to current playlist
-| Update | POST _{path: String}_ **/update** | **update** {path: String} | Update MPD database on given path (empty path = whole db)
+| Update | POST _{path: String}_ **/update** | **update** {path: String} | Update MPD database on given path (empty path = whole db). If a library cache is used, it's cleared.
 | Current | GET **/current** | **current** | Get current song info being played
 | Status | GET **/status** | **status** | Get current status (various information, such as active flags, current song id, bitrate, etc.)
 | Idle | GET **/idle** | **idle** | Wait until an event occurs
 | Notify | n/a | **notify** | Get status information right now (same as "status"), and get notified each time something changed. It's a combination of "idle" and "status" run in loop.
 | Playlist info | GET **/playlistInfo** | **playlistInfo (n/a yet!)** | Get current playlist content
 | Playlist item info | GET **/playlistInfo/:idx** | **playlistItemInfo {idx: Number} (n/a yet!)** | Get information on a specific item in current playlist
-| Custom | GET **/custom/:command** | **custom** {command: String} | Run a custom MPD command
+| Custom | POST _{command: String, stopper: Maybe String, parser: Maybe String}_ **/custom** | **custom** {command: String, stopper: Maybe String, parser: Maybe String} | Run a custom MPD command. Using a stopper allows to read more data from the socket until the stopper pattern is found (usual stopper for MPD is _\nOK\n_). Parser can be used to format response in json. 2 parsers are implemented: _"entries"_ for parsing MPD entries (files, directories, playlists) and _"status"_ for status-like information.
 | Load lib once | GET **/lib-loadonce** | **lib-loadonce** | Trigger library scan, which will put result in cache and available for "get" calls
 | Reload lib | GET **/lib-reload** | **lib-reload** | Force rescanning the library (clears cache)
 | Loading progress | GET **/lib-progress** | **lib-progress** | Get progress information on library loading. This call will returns a number in range [0, number of songs]

@@ -167,25 +167,12 @@ class MpdClient {
         return MpdClient.execAndClose("clear");
     }
 
-    private static getAddCommand(uri: string): string {
-        var cmd: string = "add";
-        // Playlists need to be "loaded" instead of "added"
-        if (uri.indexOf(".m3u") >= 0
-                || uri.indexOf(".pls") >= 0
-                || uri.indexOf("/") < 0/*for MPD-created playlists*/) {
-            cmd = "load";
-        }
-        return cmd;
-    }
-
     static add(uri: string): q.Promise<string> {
-        var cmd: string = MpdClient.getAddCommand(uri);
-        return MpdClient.execAndClose(cmd + " \"" + uri + "\"").then(function(response: string) {
-            if (response == "OK") {
-                return response;
-            } else {
-                throw new Error(response);
-            }
+        var mpdClient: MpdClient = new MpdClient();
+        return mpdClient.connect().then(function() {
+            return mpdClient.add(uri);
+        }).fin(function() {
+            mpdClient.close();
         });
     }
 
@@ -193,7 +180,13 @@ class MpdClient {
      * Non-static version; use the existing connection to MPD for adding
      */
     public add(uri: string): q.Promise<string> {
-        var cmd: string = MpdClient.getAddCommand(uri);
+        var cmd: string = "add";
+        // Playlists need to be "loaded" instead of "added"
+        if (uri.indexOf(".m3u") >= 0
+                || uri.indexOf(".pls") >= 0
+                || uri.indexOf("/") < 0/*for MPD-created playlists*/) {
+            cmd = "load";
+        }
         return this.exec(cmd + " \"" + uri + "\"").then(function(response: string) {
             if (response == "OK") {
                 return response;

@@ -152,24 +152,12 @@ var MpdClient = (function () {
         return MpdClient.execAndClose("clear");
     };
 
-    MpdClient.getAddCommand = function (uri) {
-        var cmd = "add";
-
-        // Playlists need to be "loaded" instead of "added"
-        if (uri.indexOf(".m3u") >= 0 || uri.indexOf(".pls") >= 0 || uri.indexOf("/") < 0) {
-            cmd = "load";
-        }
-        return cmd;
-    };
-
     MpdClient.add = function (uri) {
-        var cmd = MpdClient.getAddCommand(uri);
-        return MpdClient.execAndClose(cmd + " \"" + uri + "\"").then(function (response) {
-            if (response == "OK") {
-                return response;
-            } else {
-                throw new Error(response);
-            }
+        var mpdClient = new MpdClient();
+        return mpdClient.connect().then(function () {
+            return mpdClient.add(uri);
+        }).fin(function () {
+            mpdClient.close();
         });
     };
 
@@ -177,7 +165,12 @@ var MpdClient = (function () {
     * Non-static version; use the existing connection to MPD for adding
     */
     MpdClient.prototype.add = function (uri) {
-        var cmd = MpdClient.getAddCommand(uri);
+        var cmd = "add";
+
+        // Playlists need to be "loaded" instead of "added"
+        if (uri.indexOf(".m3u") >= 0 || uri.indexOf(".pls") >= 0 || uri.indexOf("/") < 0) {
+            cmd = "load";
+        }
         return this.exec(cmd + " \"" + uri + "\"").then(function (response) {
             if (response == "OK") {
                 return response;
