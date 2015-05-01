@@ -115,6 +115,7 @@ export class Loader {
     private dataPath: string = "data/";
     private useCacheFile: boolean = false;
     private allLoaded: boolean = false;
+    private deferredAllLoaded: q.Deferred<void> = q.defer<void>();
     private loadingCounter: number = 0;
     private mpdContent: SongInfo[] = [];
     private tags: ThemeTags = {};
@@ -157,6 +158,7 @@ export class Loader {
                         that.loadAllLib();
                     } else {
                         that.allLoaded = true;
+                        that.deferredAllLoaded.resolve(null);
                         if (that.loadingListener) {
                             that.loadingListener.setTotalItems(that.mpdContent.length);
                             that.loadingListener.pushBatches(data, that.tags, 0);
@@ -177,6 +179,7 @@ export class Loader {
     public clearCache(): q.Promise<void> {
         var deferred: q.Deferred<void> = q.defer<void>();
         this.allLoaded = false;
+        this.deferredAllLoaded = q.defer<void>();
         this.loadingCounter = 0;
         this.mpdContent = [];
         this.tags = {};
@@ -241,76 +244,76 @@ export class Loader {
     }
 
     public readTag(tagName: string, targets: TagTarget[]): q.Promise<ThemeTags> {
-        if (!this.allLoaded) {
-            throw new Error("Tag reading service is unavailable until the library is fully loaded.");
-        }
-        var returnTags: ThemeTags = {};
-        for (var i = 0; i < targets.length; i++) {
-            var targetType: string = targets[i].targetType;
-            var target: string = targets[i].target;
-            if (this.tags[targetType] !== undefined
-                    && this.tags[targetType][target] !== undefined
-                    && this.tags[targetType][target][tagName] !== undefined) {
-                var tag: TagsMap = {};
-                var item: ItemTags = {};
-                var theme: ThemeTags = {};
-                tag[tagName] = this.tags[targetType][target][tagName];
-                item[target] = tag;
-                theme[targetType] = item;
-                tools.override(returnTags, theme);
+        var deferred: q.Deferred<ThemeTags> = q.defer<ThemeTags>();
+        var that = this;
+        this.deferredAllLoaded.promise.then(function() {
+            var returnTags: ThemeTags = {};
+            for (var i = 0; i < targets.length; i++) {
+                var targetType: string = targets[i].targetType;
+                var target: string = targets[i].target;
+                if (that.tags[targetType] !== undefined
+                        && that.tags[targetType][target] !== undefined
+                        && that.tags[targetType][target][tagName] !== undefined) {
+                    var tag: TagsMap = {};
+                    var item: ItemTags = {};
+                    var theme: ThemeTags = {};
+                    tag[tagName] = that.tags[targetType][target][tagName];
+                    item[target] = tag;
+                    theme[targetType] = item;
+                    tools.override(returnTags, theme);
+                }
             }
-        }
-        return q.fcall<ThemeTags>(function() {
-            return returnTags;
+            deferred.resolve(returnTags);
         });
+        return deferred.promise;
     }
 
     public writeTag(tagName: string, tagValue: string, targets: TagTarget[]): q.Promise<string> {
-        if (!this.allLoaded) {
-            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
-        }
-        for (var i = 0; i < targets.length; i++) {
-            var tag: TagsMap = {};
-            var item: ItemTags = {};
-            var theme: ThemeTags = {};
-            tag[tagName] = tagValue;
-            item[targets[i].target] = tag;
-            theme[targets[i].targetType] = item;
-            tools.override(this.tags, theme);
-        }
         var deferred: q.Deferred<string> = q.defer<string>();
-        LibCache.saveTags(this.tagsFile(), this.tags).then(function() {
-            deferred.resolve("Tag succesfully written");
-        }).fail(function(reason: Error) {
-            console.log("Cache not saved: " + reason.message);
-            deferred.reject(reason);
+        var that = this;
+        this.deferredAllLoaded.promise.then(function() {
+            for (var i = 0; i < targets.length; i++) {
+                var tag: TagsMap = {};
+                var item: ItemTags = {};
+                var theme: ThemeTags = {};
+                tag[tagName] = tagValue;
+                item[targets[i].target] = tag;
+                theme[targets[i].targetType] = item;
+                tools.override(that.tags, theme);
+            }
+            LibCache.saveTags(that.tagsFile(), that.tags).then(function() {
+                deferred.resolve("Tag succesfully written");
+            }).fail(function(reason: Error) {
+                console.log("Cache not saved: " + reason.message);
+                deferred.reject(reason);
+            });
         });
         return deferred.promise;
     }
 
     public deleteTag(tagName: string, targets: TagTarget[]): q.Promise<string> {
-        if (!this.allLoaded) {
-            throw new Error("Tag writing service is unavailable until the library is fully loaded.");
-        }
-        for (var i = 0; i < targets.length; i++) {
-            if (this.tags.hasOwnProperty(targets[i].targetType)
-                    && this.tags[targets[i].targetType].hasOwnProperty(targets[i].target)
-                    && this.tags[targets[i].targetType][targets[i].target].hasOwnProperty(tagName)) {
-                delete this.tags[targets[i].targetType][targets[i].target][tagName];
-                if (Object.keys(this.tags[targets[i].targetType][targets[i].target]).length === 0) {
-                    delete this.tags[targets[i].targetType][targets[i].target];
-                    if (Object.keys(this.tags[targets[i].targetType]).length === 0) {
-                        delete this.tags[targets[i].targetType];
+        var deferred: q.Deferred<string> = q.defer<string>();
+        var that = this;
+        this.deferredAllLoaded.promise.then(function() {
+            for (var i = 0; i < targets.length; i++) {
+                if (that.tags.hasOwnProperty(targets[i].targetType)
+                        && that.tags[targets[i].targetType].hasOwnProperty(targets[i].target)
+                        && that.tags[targets[i].targetType][targets[i].target].hasOwnProperty(tagName)) {
+                    delete that.tags[targets[i].targetType][targets[i].target][tagName];
+                    if (Object.keys(that.tags[targets[i].targetType][targets[i].target]).length === 0) {
+                        delete that.tags[targets[i].targetType][targets[i].target];
+                        if (Object.keys(that.tags[targets[i].targetType]).length === 0) {
+                            delete that.tags[targets[i].targetType];
+                        }
                     }
                 }
             }
-        }
-        var deferred: q.Deferred<string> = q.defer<string>();
-        LibCache.saveTags(this.tagsFile(), this.tags).then(function() {
-            deferred.resolve("Tag succesfully deleted");
-        }).fail(function(reason: Error) {
-            console.log("Cache not saved: " + reason.message);
-            deferred.reject(reason);
+            LibCache.saveTags(that.tagsFile(), that.tags).then(function() {
+                deferred.resolve("Tag succesfully deleted");
+            }).fail(function(reason: Error) {
+                console.log("Cache not saved: " + reason.message);
+                deferred.reject(reason);
+            });
         });
         return deferred.promise;
     }
@@ -333,6 +336,7 @@ export class Loader {
             var elapsed = new Date().getTime() - start;
             console.log("finished in " + elapsed / 1000 + " seconds");
             that.allLoaded = true;
+            that.deferredAllLoaded.resolve(null);
             if (that.loadingListener) {
                 that.loadingListener.setTotalItems(that.mpdContent.length);
             }

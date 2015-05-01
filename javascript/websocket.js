@@ -35,6 +35,9 @@ function answerOnPromise(promise, socket, word, context) {
 
 function check(typeDesc, obj, socket, word) {
     if (!typeCheck.typeCheck(typeDesc, obj)) {
+        console.log("Typecheck error, expecting pattern " + typeDesc);
+        console.log("But had:");
+        console.log(obj);
         socket.emit(word, { failure: "Malformed json, expecting: " + typeDesc });
         return false;
     }
@@ -250,9 +253,11 @@ function register(socket, prefix, library) {
     });
 
     socket.on(word("tag"), function (body) {
-        if (check("{tagName: String, tagValue: String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
+        if (check("{token: Maybe String, tagName: String, tagValue: Maybe String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
             if (body.tagValue === undefined) {
-                answerOnPromise(library.readTag(body.tagName, body.targets), socket, word("tag"), body);
+                library.readTag(body.tagName, body.targets).then(function (tags) {
+                    socket.emit(word("tag"), { token: body.token, content: tags });
+                });
             } else {
                 answerOnPromise(library.writeTag(body.tagName, body.tagValue, body.targets), socket, word("tag"), body);
             }

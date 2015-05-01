@@ -25,6 +25,7 @@ import MpdStatus = require('./MpdStatus');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
+import ThemeTags = require('./libtypes/ThemeTags');
 import q = require('q');
 import typeCheck = require('type-check');
 import socketio = require('socket.io');
@@ -40,6 +41,9 @@ function answerOnPromise(promise: q.Promise<any>, socket: socketio.Socket, word:
 
 function check(typeDesc: string, obj: any, socket: socketio.Socket, word: string) {
     if (!typeCheck.typeCheck(typeDesc, obj)) {
+        console.log("Typecheck error, expecting pattern " + typeDesc);
+        console.log("But had:");
+        console.log(obj);
         socket.emit(word, {failure: "Malformed json, expecting: " + typeDesc});
         return false;
     }
@@ -258,9 +262,11 @@ export function register(socket: socketio.Socket, prefix: string, library: Libra
     });
 
     socket.on(word("tag"), function(body) {
-        if (check("{tagName: String, tagValue: String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
+        if (check("{token: Maybe String, tagName: String, tagValue: Maybe String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
             if (body.tagValue === undefined) {
-                answerOnPromise(library.readTag(body.tagName, body.targets), socket, word("tag"), body);
+                library.readTag(body.tagName, body.targets).then(function(tags: ThemeTags) {
+                    socket.emit(word("tag"), {token: body.token, content: tags});
+                });
             } else {
                 answerOnPromise(library.writeTag(body.tagName, body.tagValue, body.targets), socket, word("tag"), body);
             }
