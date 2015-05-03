@@ -219,15 +219,18 @@ var Loader = (function () {
             for (var i = 0; i < targets.length; i++) {
                 var targetType = targets[i].targetType;
                 var target = targets[i].target;
+                var tag = {};
+                var item = {};
+                var theme = {};
                 if (that.tags[targetType] !== undefined && that.tags[targetType][target] !== undefined && that.tags[targetType][target][tagName] !== undefined) {
-                    var tag = {};
-                    var item = {};
-                    var theme = {};
                     tag[tagName] = that.tags[targetType][target][tagName];
-                    item[target] = tag;
-                    theme[targetType] = item;
-                    tools.override(returnTags, theme);
+                } else {
+                    // Tag not found
+                    tag[tagName] = null;
                 }
+                item[target] = tag;
+                theme[targetType] = item;
+                tools.override(returnTags, theme);
             }
             deferred.resolve(returnTags);
         });
@@ -238,6 +241,7 @@ var Loader = (function () {
         var deferred = q.defer();
         var that = this;
         this.deferredAllLoaded.promise.then(function () {
+            var returnTags = {};
             for (var i = 0; i < targets.length; i++) {
                 var tag = {};
                 var item = {};
@@ -246,9 +250,10 @@ var Loader = (function () {
                 item[targets[i].target] = tag;
                 theme[targets[i].targetType] = item;
                 tools.override(that.tags, theme);
+                tools.override(returnTags, theme);
             }
             LibCache.saveTags(that.tagsFile(), that.tags).then(function () {
-                deferred.resolve("Tag succesfully written");
+                deferred.resolve(returnTags);
             }).fail(function (reason) {
                 console.log("Cache not saved: " + reason.message);
                 deferred.reject(reason);
@@ -261,7 +266,15 @@ var Loader = (function () {
         var deferred = q.defer();
         var that = this;
         this.deferredAllLoaded.promise.then(function () {
+            var returnTags = {};
             for (var i = 0; i < targets.length; i++) {
+                var tag = {};
+                var item = {};
+                var theme = {};
+                tag[tagName] = null;
+                item[targets[i].target] = tag;
+                theme[targets[i].targetType] = item;
+                tools.override(returnTags, theme);
                 if (that.tags.hasOwnProperty(targets[i].targetType) && that.tags[targets[i].targetType].hasOwnProperty(targets[i].target) && that.tags[targets[i].targetType][targets[i].target].hasOwnProperty(tagName)) {
                     delete that.tags[targets[i].targetType][targets[i].target][tagName];
                     if (Object.keys(that.tags[targets[i].targetType][targets[i].target]).length === 0) {
@@ -273,7 +286,7 @@ var Loader = (function () {
                 }
             }
             LibCache.saveTags(that.tagsFile(), that.tags).then(function () {
-                deferred.resolve("Tag succesfully deleted");
+                deferred.resolve(returnTags);
             }).fail(function (reason) {
                 console.log("Cache not saved: " + reason.message);
                 deferred.reject(reason);

@@ -251,27 +251,31 @@ export class Loader {
             for (var i = 0; i < targets.length; i++) {
                 var targetType: string = targets[i].targetType;
                 var target: string = targets[i].target;
+                var tag: TagsMap = {};
+                var item: ItemTags = {};
+                var theme: ThemeTags = {};
                 if (that.tags[targetType] !== undefined
                         && that.tags[targetType][target] !== undefined
                         && that.tags[targetType][target][tagName] !== undefined) {
-                    var tag: TagsMap = {};
-                    var item: ItemTags = {};
-                    var theme: ThemeTags = {};
                     tag[tagName] = that.tags[targetType][target][tagName];
-                    item[target] = tag;
-                    theme[targetType] = item;
-                    tools.override(returnTags, theme);
+                } else {
+                    // Tag not found
+                    tag[tagName] = null;
                 }
+                item[target] = tag;
+                theme[targetType] = item;
+                tools.override(returnTags, theme);
             }
             deferred.resolve(returnTags);
         });
         return deferred.promise;
     }
 
-    public writeTag(tagName: string, tagValue: string, targets: TagTarget[]): q.Promise<string> {
-        var deferred: q.Deferred<string> = q.defer<string>();
+    public writeTag(tagName: string, tagValue: string, targets: TagTarget[]): q.Promise<ThemeTags> {
+        var deferred: q.Deferred<ThemeTags> = q.defer<ThemeTags>();
         var that = this;
         this.deferredAllLoaded.promise.then(function() {
+            var returnTags: ThemeTags = {};
             for (var i = 0; i < targets.length; i++) {
                 var tag: TagsMap = {};
                 var item: ItemTags = {};
@@ -280,9 +284,10 @@ export class Loader {
                 item[targets[i].target] = tag;
                 theme[targets[i].targetType] = item;
                 tools.override(that.tags, theme);
+                tools.override(returnTags, theme);
             }
             LibCache.saveTags(that.tagsFile(), that.tags).then(function() {
-                deferred.resolve("Tag succesfully written");
+                deferred.resolve(returnTags);
             }).fail(function(reason: Error) {
                 console.log("Cache not saved: " + reason.message);
                 deferred.reject(reason);
@@ -291,11 +296,19 @@ export class Loader {
         return deferred.promise;
     }
 
-    public deleteTag(tagName: string, targets: TagTarget[]): q.Promise<string> {
-        var deferred: q.Deferred<string> = q.defer<string>();
+    public deleteTag(tagName: string, targets: TagTarget[]): q.Promise<ThemeTags> {
+        var deferred: q.Deferred<ThemeTags> = q.defer<ThemeTags>();
         var that = this;
         this.deferredAllLoaded.promise.then(function() {
+            var returnTags: ThemeTags = {};
             for (var i = 0; i < targets.length; i++) {
+                var tag: TagsMap = {};
+                var item: ItemTags = {};
+                var theme: ThemeTags = {};
+                tag[tagName] = null;
+                item[targets[i].target] = tag;
+                theme[targets[i].targetType] = item;
+                tools.override(returnTags, theme);
                 if (that.tags.hasOwnProperty(targets[i].targetType)
                         && that.tags[targets[i].targetType].hasOwnProperty(targets[i].target)
                         && that.tags[targets[i].targetType][targets[i].target].hasOwnProperty(tagName)) {
@@ -309,7 +322,7 @@ export class Loader {
                 }
             }
             LibCache.saveTags(that.tagsFile(), that.tags).then(function() {
-                deferred.resolve("Tag succesfully deleted");
+                deferred.resolve(returnTags);
             }).fail(function(reason: Error) {
                 console.log("Cache not saved: " + reason.message);
                 deferred.reject(reason);

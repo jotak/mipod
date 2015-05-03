@@ -253,20 +253,24 @@ function register(socket, prefix, library) {
     });
 
     socket.on(word("tag"), function (body) {
-        if (check("{token: Maybe String, tagName: String, tagValue: Maybe String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
+        if (check("{tagName: String, tagValue: Maybe String, targets: [{targetType: String, target: String}]}", body, socket, word("tag"))) {
             if (body.tagValue === undefined) {
                 library.readTag(body.tagName, body.targets).then(function (tags) {
-                    socket.emit(word("tag"), { token: body.token, content: tags });
+                    socket.emit(word("tag"), tags);
                 });
             } else {
-                answerOnPromise(library.writeTag(body.tagName, body.tagValue, body.targets), socket, word("tag"), body);
+                library.writeTag(body.tagName, body.tagValue, body.targets).then(function (tags) {
+                    socket.emit(word("tag"), tags);
+                });
             }
         }
     });
 
     socket.on(word("deltag"), function (body) {
         if (check("{tagName: String, targets: [{targetType: String, target: String}]}", body, socket, word("deltag"))) {
-            answerOnPromise(library.deleteTag(body.tagName, body.targets), socket, word("deltag"), body);
+            library.deleteTag(body.tagName, body.targets).then(function (tags) {
+                socket.emit(word("tag"), tags);
+            });
         }
     });
 }
