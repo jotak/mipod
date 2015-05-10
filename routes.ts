@@ -20,7 +20,7 @@ SOFTWARE.
 
 /// <reference path="type-check/type-check.d.ts" />
 
-import Library = require('./Library');
+import lib = require('./Library');
 import MpdStatus = require('./MpdStatus');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
@@ -53,7 +53,7 @@ interface RouteInfo {
 }
 
 "use strict";
-export function register(app: express.Application, prefix: string, library: Library.Loader) {
+export function register(app: express.Application, prefix: string, library: lib.Library) {
 
     var routes: RouteInfo[] = [];
 
@@ -208,27 +208,27 @@ export function register(app: express.Application, prefix: string, library: Libr
         }
     });
 
-    httpGet('/lib-loadonce', function(req, res) {
-        var status: string = library.loadOnce();
-        res.send({status: status});
-    });
-
-    httpGet('/lib-reload', function(req, res) {
-        var status: string = library.forceRefresh();
-        res.send({status: status});
-    });
-
-    httpGet('/lib-progress', function(req, res) {
-        res.send({progress: library.progress()});
-    });
-
-    httpPost('/lib-get/:start/:count', function(req, res) {
-        if (check("{treeDesc: Maybe [String], leafDesc: Maybe [String]}", req.body, res)) {
-            var treeDesc: string[] = req.body.treeDesc || ["genre","albumArtist|artist","album"];
-            var page = library.getPage(+req.params.start, +req.params.count, treeDesc, req.body.leafDesc);
-            res.send(page);
-        }
-    });
+//    httpGet('/lib-loadonce', function(req, res) {
+//        var status: string = library.loadOnce();
+//        res.send({status: status});
+//    });
+//
+//    httpGet('/lib-reload', function(req, res) {
+//        var status: string = library.forceRefreshforceRefresh();
+//        res.send({status: status});
+//    });
+//
+//    httpGet('/lib-progress', function(req, res) {
+//        res.send({progress: library.progress()});
+//    });
+//
+//    httpPost('/lib-get/:start/:count', function(req, res) {
+//        if (check("{treeDesc: Maybe [String], leafDesc: Maybe [String]}", req.body, res)) {
+//            var treeDesc: string[] = req.body.treeDesc || ["genre","albumArtist|artist","album"];
+//            var page = library.getPage(+req.params.start, +req.params.count, treeDesc, req.body.leafDesc);
+//            res.send(page);
+//        }
+//    });
 
     httpPost('/lsinfo', function(req, res) {
         if (check("{path: String, req.body.leafDesc: Maybe [String]}", req.body, res)) {

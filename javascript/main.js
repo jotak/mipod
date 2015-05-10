@@ -23,7 +23,7 @@ SOFTWARE.
 var routes = require('./routes');
 var websocket = require('./websocket');
 var tools = require('./tools');
-var Library = require('./Library');
+var lib = require('./Library');
 var MpdClient = require('./MpdClient');
 var O = require('./Options');
 var typeCheck = require('type-check');
@@ -35,8 +35,8 @@ function asRest(expressApp, options) {
 }
 exports.asRest = asRest;
 
-function asWebSocket(socket, options) {
-    registerMethod(socket, websocket.register, options);
+function asWebSocket(socketMngr, options) {
+    registerMethod(socketMngr, websocket.register, options);
 }
 exports.asWebSocket = asWebSocket;
 
@@ -52,13 +52,13 @@ function registerMethod(methodHandler, methodRegistration, options) {
     }
 
     MpdClient.configure(opts.mpdHost, opts.mpdPort);
-    var lib = new Library.Loader();
-    lib.setDataPath(opts.dataPath);
+    var library = new lib.Library();
+    library.setDataPath(opts.dataPath);
     if (opts.useLibCache) {
-        lib.setUseCacheFile(true);
+        library.setUseCacheFile(true);
     }
     if (opts.loadLibOnStartup) {
-        lib.forceRefresh();
+        library.init();
     }
-    methodRegistration(methodHandler, opts.prefix, lib);
+    methodRegistration(methodHandler, opts.prefix, library);
 }

@@ -49,7 +49,9 @@ class LoadingListener {
     private hTimeout: any;
     private totalItems: number;
     private nbSent: number;
-    constructor(public pushHandler: (data: any, nbItems: number)=>void,
+    private finished: boolean = false;
+
+    constructor(public pushHandler: (data: Page, nbItems: number)=>void,
                 public finishedHandler: (nbItems: number)=>void,
                 public maxBatchSize: number,
                 public treeDescriptor: string[],
@@ -65,6 +67,7 @@ class LoadingListener {
         if (this.nbSent === nbItems) {
             this.finishedHandler(nbItems);
             this.totalItems = -1;
+            this.finished = true;
         }
     }
 
@@ -94,32 +97,38 @@ class LoadingListener {
             } else if (this.nbSent === this.totalItems) {
                 this.finishedHandler(this.totalItems);
                 this.totalItems = -1;
+                this.finished = true;
             }
         } else {
             if (this.nbSent === this.totalItems) {
                 this.finishedHandler(this.totalItems);
                 this.totalItems = -1;
+                this.finished = true;
             }
         }
     }
+
+    public isFinished(): boolean {
+        return this.finished;
+    }
 }
 
-export interface LoadingData {
+export interface Page {
     status: string;
     finished: boolean;
     next: number;
     data: any;
 }
 
-export class Loader {
+export class Library {
     private dataPath: string = "data/";
     private useCacheFile: boolean = false;
     private allLoaded: boolean = false;
     private deferredAllLoaded: q.Deferred<void> = q.defer<void>();
-    private loadingCounter: number = 0;
+    private loadingCounter: number = -1;
     private mpdContent: SongInfo[] = [];
     private tags: ThemeTags = {};
-    private loadingListener: LoadingListener = undefined;
+    private loadingListeners: LoadingListener[] = [];
 
     public setUseCacheFile(useCacheFile: boolean) {
         this.useCacheFile = useCacheFile;
@@ -129,58 +138,81 @@ export class Loader {
         this.dataPath = dataPath;
     }
 
-    public onLoadingProgress(pushHandler: (data: LoadingData, nbItems: number)=>void, finishedHandler: (nbItems: number)=>void, maxBatchSize: number, treeDescriptor: string[], leafDescriptor?: string[]) {
-        this.loadingListener = new LoadingListener(pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor);
+    public init(): q.Promise<void> {
+        var that = this;
+        this.loadingCounter = 0;
+        return that.tagsLoader().then(function() {
+            return that.libLoader();
+        }).then(function() {
+            that.allLoaded = true;
+            that.deferredAllLoaded.resolve(null);
+        });
     }
 
-    public loadOnce(): string {
-        if (this.allLoaded) {
-            // Already loaded, no need to load again.
-            return "Already loaded";
-        } else if (this.loadingCounter > 0) {
-            // Already started to load => ignore
-            return "Load in progress";
-        } else {
-            var that = this;
-            LibCache.loadTags(this.tagsFile()).then(function(data: ThemeTags) {
+    private tagsLoader(): q.Promise<void> {
+        var that = this;
+        return LibCache.loadTags(this.tagsFile()).then(function(data: ThemeTags) {
                 that.tags = data;
             }).fail(function(reason: Error) {
                 console.log("Could not read tags: " + reason.message);
-            }).done();
+            });
+    }
 
-            if (this.useCacheFile) {
-                LibCache.loadCache(this.cacheFile()).then(function(data: SongInfo[]) {
-                    that.mpdContent = data;
-                    that.loadingCounter = data.length;
-                    if (that.loadingCounter === 0) {
-                        // Cache file is empty, so we'll try MPD anyway
-                        console.log("Loading from MPD because cache is empty");
-                        that.loadAllLib();
-                    } else {
-                        that.allLoaded = true;
-                        that.deferredAllLoaded.resolve(null);
-                        if (that.loadingListener) {
-                            that.loadingListener.setTotalItems(that.mpdContent.length);
-                            that.loadingListener.pushBatches(data, that.tags, 0);
-                        }
-                    }
-                }).fail(function(reason: Error) {
-                    console.log("Could not read cache: " + reason.message);
-                    that.loadAllLib();
-                }).done();
-                return "Start loading from cache";
-            } else {
-                this.loadAllLib();
-                return "Start loading from MPD";
-            }
+    private libLoader(): q.Promise<void> {
+        var that = this;
+        if (this.useCacheFile) {
+            return LibCache.loadCache(that.cacheFile()).then(function(data: SongInfo[]) {
+                that.mpdContent = data;
+                that.loadingCounter = data.length;
+                if (that.loadingCounter === 0) {
+                    // Cache file is empty, so we'll try MPD anyway
+                    console.log("Loading from MPD because cache is empty");
+                    return that.loadAllLib();
+                } else {
+                    that.allLoaded = true;
+                    that.deferredAllLoaded.resolve(null);
+                    that.loadingListeners.forEach(function(listener: LoadingListener) {
+                        listener.setTotalItems(that.mpdContent.length);
+                        listener.pushBatches(data, that.tags, 0);
+                    });
+                    that.loadingListeners = [];
+                }
+            }).fail(function(reason: Error) {
+                console.log("Could not read cache: " + reason.message);
+            });
+        } else {
+            return that.loadAllLib();
         }
+    }
+
+    public notifyLoading(pushHandler: (data: Page, nbItems: number)=>void, finishedHandler: (nbItems: number)=>void, maxBatchSize: number, treeDescriptor: string[], leafDescriptor?: string[]) {
+        // Lazy init if necessary
+        if (this.loadingCounter < 0) {
+            this.init();
+        }
+        var that = this;
+
+        // Create new listener and push already loaded data
+        var listener: LoadingListener = new LoadingListener(pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor);
+        listener.setTotalItems(that.mpdContent.length);
+        listener.pushBatches(that.mpdContent, that.tags, 0);
+
+        // Clean any inactive listeners, push the new one
+        var stillActive: LoadingListener[] = [];
+        stillActive.push(listener);
+        this.loadingListeners.forEach(function(listener) {
+            if (!listener.isFinished()) {
+                stillActive.push(listener);
+            }
+        });
+        this.loadingListeners = stillActive;
     }
 
     public clearCache(): q.Promise<void> {
         var deferred: q.Deferred<void> = q.defer<void>();
         this.allLoaded = false;
         this.deferredAllLoaded = q.defer<void>();
-        this.loadingCounter = 0;
+        this.loadingCounter = -1;
         this.mpdContent = [];
         this.tags = {};
         if (this.useCacheFile) {
@@ -196,27 +228,27 @@ export class Loader {
         return deferred.promise;
     }
 
-    public forceRefresh(): string {
-        var that = this;
-        this.clearCache().then(function() {
-            that.loadAllLib();
-        }).done();
-        return "OK";
-    }
+    public getPage(start: number, count: number, treeDescriptor: string[], leafDescriptor?: string[]): q.Promise<Page> {
 
-    public getPage(start: number, count: number, treeDescriptor: string[], leafDescriptor?: string[]): LoadingData {
-        var end: number = Math.min(this.mpdContent.length, start + count);
-        var subTree: Tree = organizer(
-            this.getSongsPage(this.mpdContent, start, end),
-                this.tags,
-                treeDescriptor,
-                leafDescriptor);
-        return {
-            status: "OK",
-            finished: (this.allLoaded && end === this.mpdContent.length),
-            next: end,
-            data: subTree.root
-        };
+        if (this.loadingCounter < 0) {
+            this.init();
+        }
+
+        var that = this;
+        return this.deferredAllLoaded.promise.then(function() {
+            var end: number = Math.min(that.mpdContent.length, start + count);
+            var subTree: Tree = organizer(
+                that.getSongsPage(that.mpdContent, start, end),
+                    that.tags,
+                    treeDescriptor,
+                    leafDescriptor);
+            return {
+                status: "OK",
+                finished: (that.allLoaded && end === that.mpdContent.length),
+                next: end,
+                data: subTree.root
+            };
+        });
     }
 
     public progress(): number {
@@ -339,20 +371,20 @@ export class Loader {
         return this.dataPath + "/libtags.json";
     }
 
-    private loadAllLib() {
+    private loadAllLib(): q.Promise<void> {
         var start = new Date().getTime();
         var that = this;
         var mpdClient: MpdClient = new MpdClient();
-        mpdClient.connect().then(function() {
+        return mpdClient.connect().then(function() {
             return that.loadDirForLib(mpdClient, that.mpdContent, "");
         }).then(function() {
             var elapsed = new Date().getTime() - start;
             console.log("finished in " + elapsed / 1000 + " seconds");
             that.allLoaded = true;
             that.deferredAllLoaded.resolve(null);
-            if (that.loadingListener) {
-                that.loadingListener.setTotalItems(that.mpdContent.length);
-            }
+            that.loadingListeners.forEach(function(listener: LoadingListener) {
+                listener.setTotalItems(that.mpdContent.length);
+            });
             if (that.useCacheFile) {
                 LibCache.saveCache(that.cacheFile(), that.mpdContent).fail(function(reason: Error) {
                     console.log("Cache not saved: " + reason.message);
@@ -360,7 +392,7 @@ export class Loader {
             }
         }).fin(function() {
             mpdClient.close();
-        }).done();
+        });
     }
 
     private loadDirForLib(mpd: MpdClient, songs: SongInfo[], dir: string): q.Promise<ParserInfo> {
@@ -373,9 +405,10 @@ export class Loader {
     }
 
     private collect(song: SongInfo) {
-        if (this.loadingListener) {
-            this.loadingListener.collect(song, this.tags);
-        }
+        var that = this;
+        this.loadingListeners.forEach(function(listener: LoadingListener) {
+            listener.collect(song, that.tags);
+        });
     }
 
     /*
