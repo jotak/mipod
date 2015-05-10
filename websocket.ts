@@ -40,7 +40,7 @@ function answerOnPromise(promise: q.Promise<any>, socket: socketio.Socket, word:
 }
 
 function fillToken(obj: any, body: any): any {
-if (typeof body !== "undefined" && body.hasOwnProperty("token")) {
+    if (typeof body !== "undefined" && body.hasOwnProperty("token")) {
         obj.token = body.token;
     }
     return obj;
