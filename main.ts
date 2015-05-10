@@ -26,6 +26,7 @@ import routes = require('./routes');
 import websocket = require('./websocket');
 import tools = require('./tools');
 import lib = require('./Library');
+import Statistics = require('./Statistics');
 import MpdClient = require('./MpdClient');
 import O = require('./Options');
 import typeCheck = require('type-check');
@@ -48,7 +49,7 @@ function registerMethod(methodHandler: any,
     var opts: O.IOptions = options ? tools.extend(options, O.Options.default()) : O.Options.default();
 
     // Since this module can be imported from JS applications (non-typescript), we'll add some runtime type-check on Options
-    var scheme: string = "{dataPath: String, useLibCache: Boolean, prefix: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number}";
+    var scheme: string = "{dataPath: String, useLibCache: Boolean, prefix: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number, enableStats: Boolean}";
     if (!typeCheck.typeCheck(scheme, opts)) {
         console.log("WARNING: some options provided to mipod contain unknown or invalid properties. You should fix them.");
         console.log("Options provided: " + JSON.stringify(options));
@@ -63,6 +64,9 @@ function registerMethod(methodHandler: any,
     }
     if (opts.loadLibOnStartup) {
         library.init();
+    }
+    if (opts.enableStats) {
+        new Statistics(library);
     }
     methodRegistration(methodHandler, opts.prefix, library);
 }

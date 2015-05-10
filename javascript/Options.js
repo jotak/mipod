@@ -21,16 +21,17 @@ SOFTWARE.
 var Options;
 (function (_Options) {
     var Options = (function () {
-        function Options(dataPath, useLibCache, prefix, loadLibOnStartup, mpdHost, mpdPort) {
+        function Options(dataPath, useLibCache, prefix, loadLibOnStartup, mpdHost, mpdPort, enableStats) {
             this.dataPath = dataPath;
             this.useLibCache = useLibCache;
             this.prefix = prefix;
             this.loadLibOnStartup = loadLibOnStartup;
             this.mpdHost = mpdHost;
             this.mpdPort = mpdPort;
+            this.enableStats = enableStats;
         }
         Options.default = function () {
-            return new Options("data", true, "", false, "localhost", 6600);
+            return new Options("data", true, "", false, "localhost", 6600, true);
         };
         return Options;
     })();

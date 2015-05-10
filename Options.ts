@@ -28,6 +28,7 @@ module Options {
         loadLibOnStartup?: boolean;
         mpdHost?: string;
         mpdPort?: number;
+        enableStats?: boolean;
     }
 
     export class Options implements IOptions {
@@ -36,10 +37,11 @@ module Options {
                     public prefix: string,
                     public loadLibOnStartup: boolean,
                     public mpdHost: string,
-                    public mpdPort: number) {
+                    public mpdPort: number,
+                    public enableStats: boolean) {
         }
         static default(): IOptions {
-            return new Options("data", true, "", false, "localhost", 6600);
+            return new Options("data", true, "", false, "localhost", 6600, true);
         }
     }
 }
