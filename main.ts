@@ -26,7 +26,6 @@ import routes = require('./routes');
 import websocket = require('./websocket');
 import tools = require('./tools');
 import lib = require('./Library');
-import Statistics = require('./Statistics');
 import MpdClient = require('./MpdClient');
 import O = require('./Options');
 import typeCheck = require('type-check');
@@ -44,7 +43,7 @@ export function asWebSocket(socketMngr: socketio.SocketManager, options?: O.IOpt
 }
 
 function registerMethod(methodHandler: any,
-                        methodRegistration: (methodHandler: any, prefix: string, library: lib.Library)=>void,
+                        methodRegistration: (methodHandler: any, prefix: string, library: lib.Library, enableStats: boolean)=>void,
                         options?: O.IOptions) {
     var opts: O.IOptions = options ? tools.extend(options, O.Options.default()) : O.Options.default();
 
@@ -65,9 +64,6 @@ function registerMethod(methodHandler: any,
     if (opts.loadLibOnStartup) {
         library.init();
     }
-    if (opts.enableStats) {
-        new Statistics(library);
-    }
-    methodRegistration(methodHandler, opts.prefix, library);
+    methodRegistration(methodHandler, opts.prefix, library, opts.enableStats);
 }
 

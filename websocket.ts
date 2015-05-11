@@ -21,6 +21,7 @@ SOFTWARE.
 /// <reference path="type-check/type-check.d.ts" />
 
 import lib = require('./Library');
+import Statistics = require('./Statistics');
 import MpdStatus = require('./MpdStatus');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
@@ -58,11 +59,18 @@ function check(typeDesc: string, obj: any, socket: socketio.Socket, word: string
 }
 
 "use strict";
-export function register(socketMngr: socketio.SocketManager, prefix: string, library: lib.Library) {
+export function register(socketMngr: socketio.SocketManager, prefix: string, library: lib.Library, enableStats: boolean) {
 
     var word = function(word: string): string { return prefix + word; }
     // Start idle loop
     idleLoop(socketMngr, word("onstatus"));
+
+    // Statistics service (notifies tags)
+    if (enableStats) {
+        new Statistics(library, function(tag: ThemeTags) {
+            socketMngr.sockets.emit(word("ontag"), tag);
+        });
+    }
 
     socketMngr.on("connection", function(socket) {
 

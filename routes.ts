@@ -21,10 +21,12 @@ SOFTWARE.
 /// <reference path="type-check/type-check.d.ts" />
 
 import lib = require('./Library');
+import Statistics = require('./Statistics');
 import MpdStatus = require('./MpdStatus');
 import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
+import ThemeTags = require('./libtypes/ThemeTags');
 import q = require('q');
 import typeCheck = require('type-check');
 import express = require('express');
@@ -53,7 +55,7 @@ interface RouteInfo {
 }
 
 "use strict";
-export function register(app: express.Application, prefix: string, library: lib.Library) {
+export function register(app: express.Application, prefix: string, library: lib.Library, enableStats: boolean) {
 
     var routes: RouteInfo[] = [];
 
@@ -72,6 +74,11 @@ export function register(app: express.Application, prefix: string, library: lib.
     var httpDelete = function(path: string, clbk, description?: string) {
         app.delete(prefix + path, clbk);
         routes.push({path: prefix + path, description: description, verb: "DELETE"});
+    }
+
+    if (enableStats) {
+        new Statistics(library, function(tag: ThemeTags) {
+        });
     }
 
     httpGet('/play', function(req, res) {

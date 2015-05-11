@@ -18,9 +18,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 var tools = require('./tools');
-
 "use strict";
-
 function readEntries(response) {
     var entries = [];
     var lines = response.split("\n");
@@ -30,44 +28,57 @@ function readEntries(response) {
         if (entry.key === "file") {
             currentSong = { file: entry.value };
             entries.push({ song: currentSong });
-        } else if (entry.key === "playlist") {
+        }
+        else if (entry.key === "playlist") {
             currentSong = null;
             entries.push({ playlist: entry.value });
-        } else if (entry.key === "directory") {
+        }
+        else if (entry.key === "directory") {
             currentSong = null;
             entries.push({ dir: entry.value });
-        } else if (currentSong != null) {
-            exports.setSongField(currentSong, entry.key, entry.value);
+        }
+        else if (currentSong != null) {
+            setSongField(currentSong, entry.key, entry.value);
         }
     }
     return entries;
 }
 exports.readEntries = readEntries;
-
 function setSongField(song, key, value) {
     if (key == "Last-Modified") {
         song.lastModified = value;
-    } else if (key == "Time") {
+    }
+    else if (key == "Time") {
         song.time = +value;
-    } else if (key == "Artist") {
+    }
+    else if (key == "Artist") {
         song.artist = value;
-    } else if (key == "AlbumArtist") {
+    }
+    else if (key == "AlbumArtist") {
         song.albumArtist = value;
-    } else if (key == "Title") {
+    }
+    else if (key == "Title") {
         song.title = value;
-    } else if (key == "Album") {
+    }
+    else if (key == "Album") {
         song.album = value;
-    } else if (key == "Track") {
+    }
+    else if (key == "Track") {
         song.track = value;
-    } else if (key == "Date") {
+    }
+    else if (key == "Date") {
         song.date = value;
-    } else if (key == "Genre") {
+    }
+    else if (key == "Genre") {
         song.genre = value;
-    } else if (key == "Composer") {
+    }
+    else if (key == "Composer") {
         song.composer = value;
-    } else if (key == "Pos") {
+    }
+    else if (key == "Pos") {
         song.pos = +value;
-    } else if (key == "Id") {
+    }
+    else if (key == "Id") {
         song.id = +value;
     }
 }

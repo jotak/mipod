@@ -18,9 +18,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 var tools = require('./tools');
-
 "use strict";
-
 /* MPD DATA:
 volume?: number;
 repeat?: boolean;
@@ -64,25 +62,30 @@ function parse(response) {
         var asNumber = +asMap[key];
         if (!isNaN(asNumber)) {
             asMap[key] = asNumber;
-        } else {
+        }
+        else {
             delete asMap[key];
         }
     });
     ["repeat", "random", "single", "consume"].forEach(function (key) {
         if (asMap[key] === "1") {
             asMap[key] = true;
-        } else if (asMap[key] === "0") {
+        }
+        else if (asMap[key] === "0") {
             asMap[key] = false;
-        } else {
+        }
+        else {
             delete asMap[key];
         }
     });
     if (asMap.hasOwnProperty('audioChannels')) {
         if (asMap['audioChannels'] > 2) {
             asMap['audioChannels'] = "Multichannel";
-        } else if (asMap['audioChannels'] === 2) {
+        }
+        else if (asMap['audioChannels'] === 2) {
             asMap['audioChannels'] = "Stereo";
-        } else {
+        }
+        else {
             asMap['audioChannels'] = "Mono";
         }
     }

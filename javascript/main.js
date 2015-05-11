@@ -24,26 +24,20 @@ var routes = require('./routes');
 var websocket = require('./websocket');
 var tools = require('./tools');
 var lib = require('./Library');
-var Statistics = require('./Statistics');
 var MpdClient = require('./MpdClient');
 var O = require('./Options');
 var typeCheck = require('type-check');
-
 "use strict";
-
 function asRest(expressApp, options) {
     registerMethod(expressApp, routes.register, options);
 }
 exports.asRest = asRest;
-
 function asWebSocket(socketMngr, options) {
     registerMethod(socketMngr, websocket.register, options);
 }
 exports.asWebSocket = asWebSocket;
-
 function registerMethod(methodHandler, methodRegistration, options) {
     var opts = options ? tools.extend(options, O.Options.default()) : O.Options.default();
-
     // Since this module can be imported from JS applications (non-typescript), we'll add some runtime type-check on Options
     var scheme = "{dataPath: String, useLibCache: Boolean, prefix: String, loadLibOnStartup: Boolean, mpdHost: String, mpdPort: Number, enableStats: Boolean}";
     if (!typeCheck.typeCheck(scheme, opts)) {
@@ -51,7 +45,6 @@ function registerMethod(methodHandler, methodRegistration, options) {
         console.log("Options provided: " + JSON.stringify(options));
         console.log("Expected options scheme: " + scheme);
     }
-
     MpdClient.configure(opts.mpdHost, opts.mpdPort);
     var library = new lib.Library();
     library.setDataPath(opts.dataPath);
@@ -61,8 +54,5 @@ function registerMethod(methodHandler, methodRegistration, options) {
     if (opts.loadLibOnStartup) {
         library.init();
     }
-    if (opts.enableStats) {
-        new Statistics(library);
-    }
-    methodRegistration(methodHandler, opts.prefix, library);
+    methodRegistration(methodHandler, opts.prefix, library, opts.enableStats);
 }

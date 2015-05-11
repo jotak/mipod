@@ -24,13 +24,11 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var mipod = require('./main');
 var O = require('./Options');
-
 "use strict";
 var app = express();
 app.use(bodyParser.json());
 var opts = O.Options.default();
 var port = 80;
-
 function usage() {
     console.log("Usage: node mipod-rest [options=values]");
     console.log("");
@@ -49,7 +47,6 @@ function usage() {
     console.log("");
     console.log("More documentation available on https://github.com/jotak/mipod");
 }
-
 var mapParams = {
     "--port": function (val) {
         port = +val;
@@ -85,10 +82,8 @@ var mapParams = {
         process.exit(0);
     }
 };
-
 mapParams["-p"] = mapParams["--port"];
 mapParams["-h"] = mapParams["--help"];
-
 process.argv.forEach(function (arg, index, array) {
     if (index > 1) {
         var key = arg;
@@ -101,16 +96,14 @@ process.argv.forEach(function (arg, index, array) {
         var fct = mapParams[key];
         if (fct) {
             fct(value);
-        } else {
+        }
+        else {
             console.log("Unknown option " + arg);
             usage();
             process.exit(0);
         }
     }
 });
-
 mipod.asRest(app, opts);
-
 app.listen(port);
-
 console.log('Server running on port ' + port);

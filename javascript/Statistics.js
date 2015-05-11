@@ -19,14 +19,12 @@ SOFTWARE.
 */
 /// <reference path="q/Q.d.ts" />
 var MpdClient = require('./MpdClient');
-
 var MpdEntries = require('./MpdEntries');
-
 "use strict";
-
 var Statistics = (function () {
-    function Statistics(library) {
+    function Statistics(library, onTaggedClbk) {
         this.library = library;
+        this.onTaggedClbk = onTaggedClbk;
         this.lastPlayed = "";
         this.idleLoop();
     }
@@ -43,14 +41,12 @@ var Statistics = (function () {
             }
         });
     };
-
     Statistics.prototype.idleLoop = function () {
         var that = this;
         this.idleOnce().then(function () {
             that.idleLoop();
         });
     };
-
     Statistics.prototype.nowPlaying = function (file) {
         var tagTimes = "times";
         var tagLast = "last";
@@ -59,20 +55,26 @@ var Statistics = (function () {
             targetType: "song",
             target: file
         });
-
         var that = this;
+        // Note: when tag doesn't exist, readTags returns it as "null"
+        // "null + 1" = 1... [sic]
         this.library.readTag(tagTimes, targets).then(function (tag) {
             if (tag.hasOwnProperty("song") && tag["song"].hasOwnProperty(file) && tag["song"][file].hasOwnProperty(tagTimes)) {
-                try  {
+                try {
                     var times = +tag["song"][file][tagTimes];
-                    that.library.writeTag(tagTimes, String(times + 1), targets);
-                } catch (err) {
+                    that.library.writeTag(tagTimes, String(times + 1), targets).then(function (writtenTag) {
+                        that.onTaggedClbk(writtenTag);
+                    });
+                }
+                catch (err) {
                     console.log("Could not write tag " + tagTimes + " on " + file);
                     console.log(err);
                 }
             }
         });
-        this.library.writeTag(tagLast, String(new Date()), targets);
+        this.library.writeTag(tagLast, String(new Date()), targets).then(function (writtenTag) {
+            that.onTaggedClbk(writtenTag);
+        });
     };
     return Statistics;
 })();
