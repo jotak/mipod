@@ -69,7 +69,7 @@ class LibCache {
 
     static saveTags(filepath: string, data: ThemeTags): q.Promise<string> {
         var deferred: q.Deferred<string> = q.defer<string>();
-        fs.writeFile(filepath, JSON.stringify(data), function(err) {
+        fs.writeFile(filepath, JSON.stringify(data, null, 2), function(err) {
             if (err) {
                 deferred.reject(new Error(err.code));
             } else {
