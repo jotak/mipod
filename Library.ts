@@ -56,6 +56,7 @@ class LoadingListener {
                 public maxBatchSize: number,
                 public treeDescriptor: string[],
                 public leafDescriptor?: string[]) {
+        console.log("Starting LoadingListener for a client");
         this.collected = [];
         this.hTimeout = null;
         this.totalItems = -1;
@@ -65,9 +66,7 @@ class LoadingListener {
     public setTotalItems(nbItems: number) {
         this.totalItems = nbItems;
         if (this.nbSent === nbItems) {
-            this.finishedHandler(nbItems);
-            this.totalItems = -1;
-            this.finished = true;
+            this.notifyFinished();
         }
     }
 
@@ -95,17 +94,20 @@ class LoadingListener {
                     that.pushBatches(data, tags, start);
                 }, 200);
             } else if (this.nbSent === this.totalItems) {
-                this.finishedHandler(this.totalItems);
-                this.totalItems = -1;
-                this.finished = true;
+                this.notifyFinished();
             }
         } else {
             if (this.nbSent === this.totalItems) {
-                this.finishedHandler(this.totalItems);
-                this.totalItems = -1;
-                this.finished = true;
+                this.notifyFinished();
             }
         }
+    }
+
+    private notifyFinished() {
+        console.log("Notifying client Library has finished to load");
+        this.finishedHandler(this.totalItems);
+        this.totalItems = -1;
+        this.finished = true;
     }
 
     public isFinished(): boolean {
@@ -139,11 +141,13 @@ export class Library {
     }
 
     public init(): q.Promise<void> {
+        console.log("Starting to load Library");
         var that = this;
         this.loadingCounter = 0;
         return that.tagsLoader().then(function() {
             return that.libLoader();
         }).then(function() {
+            console.log("Finished to load Library");
             that.allLoaded = true;
             that.deferredAllLoaded.resolve(null);
         });
