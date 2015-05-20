@@ -68,3 +68,18 @@ function splitOnce(str, separator) {
     }
 }
 exports.splitOnce = splitOnce;
+function mapEquals(map1, map2, ignoreKeys) {
+    ignoreKeys = ignoreKeys || [];
+    if (Object.keys(map1).length != Object.keys(map2).length) {
+        return false;
+    }
+    for (var key in map1) {
+        if (ignoreKeys.indexOf(key) < 0) {
+            if (map1[key] !== map2[key]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+exports.mapEquals = mapEquals;

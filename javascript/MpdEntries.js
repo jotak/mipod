@@ -83,3 +83,7 @@ function setSongField(song, key, value) {
     }
 }
 exports.setSongField = setSongField;
+function entryEquals(entry1, entry2) {
+    return entry1.dir === entry2.dir && entry1.playlist === entry2.playlist && ((entry1.song == undefined && entry2.song == undefined) || (entry1.song != undefined && entry2.song != undefined && entry1.song.file === entry2.song.file));
+}
+exports.entryEquals = entryEquals;

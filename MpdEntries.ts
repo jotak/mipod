@@ -73,3 +73,10 @@ export function setSongField(song: SongInfo, key: string, value: string) {
         song.id = +value;
     }
 }
+
+export function entryEquals(entry1: MpdEntry, entry2: MpdEntry): boolean {
+    return entry1.dir === entry2.dir
+        && entry1.playlist === entry2.playlist
+        && ((entry1.song == undefined && entry2.song == undefined)
+            || (entry1.song != undefined && entry2.song != undefined && entry1.song.file === entry2.song.file));
+}

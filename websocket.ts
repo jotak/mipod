@@ -27,6 +27,7 @@ import MpdEntries = require('./MpdEntries');
 import MpdEntry = require('./libtypes/MpdEntry');
 import MpdClient = require('./MpdClient');
 import ThemeTags = require('./libtypes/ThemeTags');
+import tools = require('./tools');
 import q = require('q');
 import typeCheck = require('type-check');
 import socketio = require('socket.io');
@@ -61,9 +62,11 @@ function check(typeDesc: string, obj: any, socket: socketio.Socket, word: string
 "use strict";
 export function register(socketMngr: socketio.SocketManager, prefix: string, library: lib.Library, enableStats: boolean) {
 
+    
+    
     var word = function(word: string): string { return prefix + word; }
     // Start idle loop
-    idleLoop(socketMngr, word("onstatus"));
+    idleLoop(socketMngr, word("onchange"));
 
     // Statistics service (notifies tags)
     if (enableStats) {
@@ -297,13 +300,32 @@ export function register(socketMngr: socketio.SocketManager, prefix: string, lib
     });
 }
 
+function getStatusAndCurrent(): q.Promise<any[]> {
+    return q.all([
+        MpdClient.status()
+            .then(MpdStatus.parse),
+        MpdClient.current()
+            .then(MpdEntries.readEntries)
+            .then(function(entries: MpdEntry[]) {
+                return entries.length === 0 ? {} : entries[0];
+            })
+    ]);
+}
+
 var lastIdleSuccess: boolean = true;
+var lastStatus: {[key: string]: any} = {};
+var lastCurrent: MpdEntry = {song: undefined, dir: undefined, playlist: undefined};
 function idleOnce(socketMngr: socketio.SocketManager, word: string): q.Promise<void> {
     return MpdClient.idle()
-        .then(MpdClient.status)
-        .then(MpdStatus.parse)
-        .then(function(json) {
-            socketMngr.sockets.emit(word, json);
+        .then(getStatusAndCurrent)
+        .then(function(results) {
+            var status: {[key: string]: any} = results[0];
+            var current: MpdEntry = results[1];
+            if (!MpdEntries.entryEquals(lastCurrent, current) || !tools.mapEquals(lastStatus, status, ["time", "elapsed"])) {
+                socketMngr.sockets.emit(word, {"status": status, "current": current});
+                lastCurrent = current;
+                lastStatus = status;
+            }
             lastIdleSuccess = true;
         }).fail(function(reason: Error) {
             console.log("Idle error: " + reason.message);

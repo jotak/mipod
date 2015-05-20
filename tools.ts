@@ -69,3 +69,18 @@ export function splitOnce(str: string, separator: string): KeyValue {
         return {key: "", value: str.slice(i+separator.length)};
     }
 }
+
+export function mapEquals(map1: {[key: string]: any}, map2: {[key: string]: any}, ignoreKeys?: string[]): boolean {
+    ignoreKeys = ignoreKeys || [];
+    if (Object.keys(map1).length != Object.keys(map2).length) {
+        return false;
+    }
+    for (var key in map1) {
+        if (ignoreKeys.indexOf(key) < 0) {
+            if (map1[key] !== map2[key]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}

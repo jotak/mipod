@@ -21,6 +21,8 @@ var Statistics = require('./Statistics');
 var MpdStatus = require('./MpdStatus');
 var MpdEntries = require('./MpdEntries');
 var MpdClient = require('./MpdClient');
+var tools = require('./tools');
+var q = require('q');
 var typeCheck = require('type-check');
 function answerOnPromise(promise, socket, word, body) {
     promise.then(function (answer) {
@@ -52,7 +54,7 @@ function register(socketMngr, prefix, library, enableStats) {
         return prefix + word;
     };
     // Start idle loop
-    idleLoop(socketMngr, word("onstatus"));
+    idleLoop(socketMngr, word("onchange"));
     // Statistics service (notifies tags)
     if (enableStats) {
         new Statistics(library, function (tag) {
@@ -245,10 +247,26 @@ function register(socketMngr, prefix, library, enableStats) {
     });
 }
 exports.register = register;
+function getStatusAndCurrent() {
+    return q.all([
+        MpdClient.status().then(MpdStatus.parse),
+        MpdClient.current().then(MpdEntries.readEntries).then(function (entries) {
+            return entries.length === 0 ? {} : entries[0];
+        })
+    ]);
+}
 var lastIdleSuccess = true;
+var lastStatus = {};
+var lastCurrent = { song: undefined, dir: undefined, playlist: undefined };
 function idleOnce(socketMngr, word) {
-    return MpdClient.idle().then(MpdClient.status).then(MpdStatus.parse).then(function (json) {
-        socketMngr.sockets.emit(word, json);
+    return MpdClient.idle().then(getStatusAndCurrent).then(function (results) {
+        var status = results[0];
+        var current = results[1];
+        if (!MpdEntries.entryEquals(lastCurrent, current) || !tools.mapEquals(lastStatus, status, ["time", "elapsed"])) {
+            socketMngr.sockets.emit(word, { "status": status, "current": current });
+            lastCurrent = current;
+            lastStatus = status;
+        }
         lastIdleSuccess = true;
     }).fail(function (reason) {
         console.log("Idle error: " + reason.message);
