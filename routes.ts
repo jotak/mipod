@@ -42,6 +42,7 @@ function answerOnPromise(promise: q.Promise<any>, httpResponse: any) {
 
 function check(typeDesc: string, obj: any, httpResponse: any) {
     if (!typeCheck.typeCheck(typeDesc, obj)) {
+        console.log(obj);
         httpResponse.status(400).send("Malformed json, expecting: " + typeDesc);
         return false;
     }
@@ -238,7 +239,7 @@ export function register(app: express.Application, prefix: string, library: lib.
 //    });
 
     httpPost('/lsinfo', function(req, res) {
-        if (check("{path: String, req.body.leafDesc: Maybe [String]}", req.body, res)) {
+        if (check("{path: String, leafDesc: Maybe [String]}", req.body, res)) {
             library.lsInfo(req.body.path, req.body.leafDesc).then(function(lstContent: any[]) {
                 res.send(lstContent);
             });
@@ -270,6 +271,18 @@ export function register(app: express.Application, prefix: string, library: lib.
         if (check("{targets: [{targetType: String, target: String}]}", req.body, res)) {
             answerOnPromise(library.deleteTag(tagName, req.body.targets), res);
         }
+    });
+
+    httpGet('/playlist/:idx', function(req, res) {
+        var idx: number = +req.params.idx;
+        answerOnPromise(
+            library.lsInfo("", ["playlist"]).then(function(lstContent: any[]) {
+                if (idx >= 0 && lstContent.length > idx && lstContent[idx].playlist) {
+                    return MpdClient.playEntry(lstContent[idx].playlist);
+                }
+            }),
+            res
+        );
     });
 
     app.get(prefix + '/', function(req, res) {
