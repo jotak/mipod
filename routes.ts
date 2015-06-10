@@ -42,7 +42,6 @@ function answerOnPromise(promise: q.Promise<any>, httpResponse: any) {
 
 function check(typeDesc: string, obj: any, httpResponse: any) {
     if (!typeCheck.typeCheck(typeDesc, obj)) {
-        console.log(obj);
         httpResponse.status(400).send("Malformed json, expecting: " + typeDesc);
         return false;
     }
