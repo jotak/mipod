@@ -304,8 +304,27 @@ class MpdClient {
         return MpdClient.execAndClose("status");
     }
 
-    static idle(): q.Promise<string> {
+    static idle() {
         return MpdClient.execAndClose("idle");
+    }
+
+    static idleLoop(options: string, clbk: (args: any) => void, args: any) {
+        var mpdClient: MpdClient = new MpdClient();
+        mpdClient.connect().then(function() {
+            mpdClient.idleLoop(options, clbk, args);
+        });
+    }
+
+    public idleLoop(options: string, clbk: (args: any) => void, args: any) {
+        console.log("Entering idle...");
+        var that = this;
+        return this.exec("idle " + options).then(function(whatever: string) {
+            clbk(args);
+            that.idleLoop(options, clbk, args);
+        }).fail(function(reason: Error) {
+            // re-initiate idle
+            MpdClient.idleLoop(options, clbk, args);
+        });
     }
 
     static playlistInfo(): q.Promise<string> {

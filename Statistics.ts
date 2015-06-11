@@ -39,29 +39,29 @@ class Statistics {
         this.idleLoop();
     }
 
-    private idleOnce(): q.Promise<void> {
-        var that = this;
-        return MpdClient.idle()
-            .then(MpdClient.current)
-            .then(MpdEntries.readEntries)
-            .then(function(entries: MpdEntry[]) {
-                if (entries.length > 0 && entries[0].song) {
-                    return entries[0].song.file;
-                }
-                return null;
-            })
-            .then(function(file) {
-                if (that.lastPlayed != file) {
-                    that.nowPlaying(file);
-                }
-            });
-    }
+//    private idleOnce(): q.Promise<void> {
+//        var that = this;
+//        return MpdClient.idle()
+//            .then(MpdClient.current)
+//            .then(MpdEntries.readEntries)
+//            .then(function(entries: MpdEntry[]) {
+//                if (entries.length > 0 && entries[0].song) {
+//                    return entries[0].song.file;
+//                }
+//                return null;
+//            })
+//            .then(function(file) {
+//                if (that.lastPlayed != file) {
+//                    that.nowPlaying(file);
+//                }
+//            });
+//    }
 
     private idleLoop() {
-        var that = this;
-        this.idleOnce().then(function() {
-            that.idleLoop();
-        });
+//        var that = this;
+//        this.idleOnce().then(function() {
+//            that.idleLoop();
+//        });
     }
 
     private nowPlaying(file: string) {

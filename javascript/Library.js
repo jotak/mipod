@@ -19,11 +19,14 @@ SOFTWARE.
 */
 /// <reference path="q/Q.d.ts" />
 var MpdClient = require('./MpdClient');
+
 var MpdEntries = require('./MpdEntries');
 var LibCache = require('./LibCache');
 var tools = require('./tools');
 var q = require('q');
+
 "use strict";
+
 var LoadingListener = (function () {
     function LoadingListener(pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor) {
         this.pushHandler = pushHandler;
@@ -44,6 +47,7 @@ var LoadingListener = (function () {
             this.notifyFinished();
         }
     };
+
     LoadingListener.prototype.collect = function (song, tags) {
         this.collected.push(song);
         if (this.hTimeout === null) {
@@ -55,6 +59,7 @@ var LoadingListener = (function () {
             }, 200);
         }
     };
+
     LoadingListener.prototype.pushBatches = function (data, tags, start) {
         var batchSize = Math.min(this.maxBatchSize, data.length - start);
         if (batchSize > 0) {
@@ -66,28 +71,29 @@ var LoadingListener = (function () {
                 setTimeout(function () {
                     that.pushBatches(data, tags, start);
                 }, 200);
-            }
-            else if (this.nbSent === this.totalItems) {
+            } else if (this.nbSent === this.totalItems) {
                 this.notifyFinished();
             }
-        }
-        else {
+        } else {
             if (this.nbSent === this.totalItems) {
                 this.notifyFinished();
             }
         }
     };
+
     LoadingListener.prototype.notifyFinished = function () {
         console.log("Notifying client Library has finished to load");
         this.finishedHandler(this.totalItems);
         this.totalItems = -1;
         this.finished = true;
     };
+
     LoadingListener.prototype.isFinished = function () {
         return this.finished;
     };
     return LoadingListener;
 })();
+
 var Library = (function () {
     function Library() {
         this.dataPath = "data/";
@@ -102,9 +108,11 @@ var Library = (function () {
     Library.prototype.setUseCacheFile = function (useCacheFile) {
         this.useCacheFile = useCacheFile;
     };
+
     Library.prototype.setDataPath = function (dataPath) {
         this.dataPath = dataPath;
     };
+
     Library.prototype.init = function () {
         console.log("Starting to load Library");
         var that = this;
@@ -117,6 +125,7 @@ var Library = (function () {
             that.deferredAllLoaded.resolve(null);
         });
     };
+
     Library.prototype.tagsLoader = function () {
         var that = this;
         return LibCache.loadTags(this.tagsFile()).then(function (data) {
@@ -125,6 +134,7 @@ var Library = (function () {
             console.log("Could not read tags: " + reason.message);
         });
     };
+
     Library.prototype.libLoader = function () {
         var that = this;
         if (this.useCacheFile) {
@@ -135,8 +145,7 @@ var Library = (function () {
                     // Cache file is empty, so we'll try MPD anyway
                     console.log("Loading from MPD because cache is empty");
                     return that.loadAllLib();
-                }
-                else {
+                } else {
                     that.allLoaded = true;
                     that.deferredAllLoaded.resolve(null);
                     that.loadingListeners.forEach(function (listener) {
@@ -148,21 +157,23 @@ var Library = (function () {
             }).fail(function (reason) {
                 console.log("Could not read cache: " + reason.message);
             });
-        }
-        else {
+        } else {
             return that.loadAllLib();
         }
     };
+
     Library.prototype.notifyLoading = function (pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor) {
         // Lazy init if necessary
         if (this.loadingCounter < 0) {
             this.init();
         }
         var that = this;
+
         // Create new listener and push already loaded data
         var listener = new LoadingListener(pushHandler, finishedHandler, maxBatchSize, treeDescriptor, leafDescriptor);
         listener.setTotalItems(that.mpdContent.length);
         listener.pushBatches(that.mpdContent, that.tags, 0);
+
         // Clean any inactive listeners, push the new one
         var stillActive = [];
         stillActive.push(listener);
@@ -173,6 +184,7 @@ var Library = (function () {
         });
         this.loadingListeners = stillActive;
     };
+
     Library.prototype.clearCache = function () {
         var deferred = q.defer();
         this.allLoaded = false;
@@ -187,16 +199,17 @@ var Library = (function () {
                 console.log("Cache not saved: " + reason.message);
                 deferred.reject(reason);
             });
-        }
-        else {
+        } else {
             deferred.resolve(null);
         }
         return deferred.promise;
     };
+
     Library.prototype.getPage = function (start, count, treeDescriptor, leafDescriptor) {
         if (this.loadingCounter < 0) {
             this.init();
         }
+
         var that = this;
         return this.deferredAllLoaded.promise.then(function () {
             var end = Math.min(that.mpdContent.length, start + count);
@@ -209,9 +222,11 @@ var Library = (function () {
             };
         });
     };
+
     Library.prototype.progress = function () {
         return this.loadingCounter;
     };
+
     Library.prototype.lsInfo = function (dir, leafDescriptor) {
         var that = this;
         return MpdClient.lsinfo(dir).then(function (response) {
@@ -220,6 +235,7 @@ var Library = (function () {
             });
         });
     };
+
     Library.prototype.search = function (mode, searchstr, leafDescriptor) {
         var that = this;
         return MpdClient.search(mode, searchstr).then(function (response) {
@@ -228,6 +244,7 @@ var Library = (function () {
             });
         });
     };
+
     Library.prototype.readTag = function (tagName, targets) {
         var deferred = q.defer();
         var that = this;
@@ -241,8 +258,7 @@ var Library = (function () {
                 var theme = {};
                 if (that.tags[targetType] !== undefined && that.tags[targetType][target] !== undefined && that.tags[targetType][target][tagName] !== undefined) {
                     tag[tagName] = that.tags[targetType][target][tagName];
-                }
-                else {
+                } else {
                     // Tag not found
                     tag[tagName] = null;
                 }
@@ -254,6 +270,7 @@ var Library = (function () {
         });
         return deferred.promise;
     };
+
     Library.prototype.writeTag = function (tagName, tagValue, targets) {
         var deferred = q.defer();
         var that = this;
@@ -278,6 +295,7 @@ var Library = (function () {
         });
         return deferred.promise;
     };
+
     Library.prototype.deleteTag = function (tagName, targets) {
         var deferred = q.defer();
         var that = this;
@@ -310,12 +328,15 @@ var Library = (function () {
         });
         return deferred.promise;
     };
+
     Library.prototype.cacheFile = function () {
         return this.dataPath + "/libcache.json";
     };
+
     Library.prototype.tagsFile = function () {
         return this.dataPath + "/libtags.json";
     };
+
     Library.prototype.loadAllLib = function () {
         var start = new Date().getTime();
         var that = this;
@@ -339,6 +360,7 @@ var Library = (function () {
             mpdClient.close();
         });
     };
+
     Library.prototype.loadDirForLib = function (mpd, songs, dir) {
         var that = this;
         return mpd.lsinfo(dir).then(function (response) {
@@ -346,40 +368,42 @@ var Library = (function () {
             return that.parseNext({ mpd: mpd, songs: songs, lines: lines, cursor: 0 });
         });
     };
+
     Library.prototype.collect = function (song) {
         var that = this;
         this.loadingListeners.forEach(function (listener) {
             listener.collect(song, that.tags);
         });
     };
-    /*
-        EXAMPLE OF DATA returned by MPD
-        directory: USB
-        directory: WEBRADIO
-        playlist: rock
-        Last-Modified: 2014-07-06T12:05:51Z
 
-        OTHER EXAMPLE
-        file: USB\/Musics\/myFile.mp3
-        Last-Modified: 2013-09-15T07:33:08Z
-        Time: 202
-        Artist: An artist
-        AlbumArtist: An artist
-        Title: My song
-        Album: An album
-        Track: 1
-        Date: 2004
-        Genre: Rock
-        file: USB\/Musics\/anotherFile.mp3
-        Last-Modified: 2013-09-15T07:33:14Z
-        Time: 242
-        Artist: An artist
-        AlbumArtist: An artist
-        Title: Another song
-        Album: An album
-        Track: 1
-        Date: 2004
-        Genre: Rock
+    /*
+    EXAMPLE OF DATA returned by MPD
+    directory: USB
+    directory: WEBRADIO
+    playlist: rock
+    Last-Modified: 2014-07-06T12:05:51Z
+    
+    OTHER EXAMPLE
+    file: USB\/Musics\/myFile.mp3
+    Last-Modified: 2013-09-15T07:33:08Z
+    Time: 202
+    Artist: An artist
+    AlbumArtist: An artist
+    Title: My song
+    Album: An album
+    Track: 1
+    Date: 2004
+    Genre: Rock
+    file: USB\/Musics\/anotherFile.mp3
+    Last-Modified: 2013-09-15T07:33:14Z
+    Time: 242
+    Artist: An artist
+    AlbumArtist: An artist
+    Title: Another song
+    Album: An album
+    Track: 1
+    Date: 2004
+    Genre: Rock
     */
     Library.prototype.parseNext = function (parser) {
         var that = this;
@@ -391,40 +415,38 @@ var Library = (function () {
                 currentSong = { "file": entry.value };
                 parser.songs.push(currentSong);
                 this.loadingCounter++;
-            }
-            else if (entry.key === "directory") {
+            } else if (entry.key === "directory") {
                 currentSong !== null && this.collect(currentSong);
                 currentSong = null;
+
                 // Load (async) the directory content, and then only continue on parsing what remains here
                 return this.loadDirForLib(parser.mpd, parser.songs, entry.value).then(function (subParser) {
                     // this "subParser" contains gathered songs, whereas the existing "parser" contains previous cursor information that we need to continue on this folder
                     return that.parseNext({ mpd: subParser.mpd, songs: subParser.songs, lines: parser.lines, cursor: parser.cursor + 1 });
                 });
-            }
-            else if (entry.key === "playlist") {
+            } else if (entry.key === "playlist") {
                 // skip
                 currentSong !== null && this.collect(currentSong);
                 currentSong = null;
-            }
-            else if (currentSong != null) {
+            } else if (currentSong != null) {
                 MpdEntries.setSongField(currentSong, entry.key, entry.value);
             }
         }
         currentSong !== null && this.collect(currentSong);
+
         // Did not find any sub-directory, return directly this data
         return q.fcall(function () {
             return parser;
         });
     };
+
     Library.prototype.parseFlatDir = function (response, leafDescriptor) {
         return MpdEntries.readEntries(response).map(function (inObj) {
             if (inObj.dir && (leafDescriptor === undefined || leafDescriptor.indexOf("directory") >= 0)) {
                 return { "directory": inObj.dir };
-            }
-            else if (inObj.playlist && (leafDescriptor === undefined || leafDescriptor.indexOf("playlist") >= 0)) {
+            } else if (inObj.playlist && (leafDescriptor === undefined || leafDescriptor.indexOf("playlist") >= 0)) {
                 return { "playlist": inObj.playlist };
-            }
-            else if (inObj.song) {
+            } else if (inObj.song) {
                 if (leafDescriptor) {
                     var outObj = {};
                     leafDescriptor.forEach(function (key) {
@@ -433,18 +455,17 @@ var Library = (function () {
                         }
                     });
                     return outObj;
-                }
-                else {
+                } else {
                     return inObj.song;
                 }
-            }
-            else {
+            } else {
                 return {};
             }
         }).filter(function (obj) {
             return Object.keys(obj).length > 0;
         });
     };
+
     Library.prototype.getSongsPage = function (allSongs, start, end) {
         if (end > start) {
             return allSongs.slice(start, end);
@@ -454,12 +475,14 @@ var Library = (function () {
     return Library;
 })();
 exports.Library = Library;
+
 // Returns a custom object tree corresponding to the descriptor
 function organizer(flat, tags, treeDescriptor, leafDescriptor) {
     var tree = {};
     flat.forEach(function (song) {
         var treePtr = tree;
         var depth = 1;
+
         // strPossibleKeys can be like "albumArtist|artist", or just "album" for instance
         treeDescriptor.forEach(function (strPossibleKeys) {
             var possibleKeys = strPossibleKeys.split("|");
@@ -476,8 +499,7 @@ function organizer(flat, tags, treeDescriptor, leafDescriptor) {
             if (!treePtr[valueForKey]) {
                 if (depth === treeDescriptor.length) {
                     treePtr[valueForKey] = { tags: {}, mpd: [] };
-                }
-                else {
+                } else {
                     treePtr[valueForKey] = { tags: {}, mpd: {} };
                 }
                 var mostCommonKey = possibleKeys[possibleKeys.length - 1];
@@ -493,8 +515,7 @@ function organizer(flat, tags, treeDescriptor, leafDescriptor) {
             leafDescriptor.forEach(function (key) {
                 leaf[key] = song[key];
             });
-        }
-        else {
+        } else {
             leaf = song;
         }
         if (tags["song"] && tags["song"][song.file]) {

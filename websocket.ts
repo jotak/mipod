@@ -220,9 +220,9 @@ export function register(socketMngr: socketio.SocketManager, prefix: string, lib
             answerOnPromise(MpdClient.status().then(MpdStatus.parse), socket, word("status"), body);
         });
 
-        socketOn(word("idle"), function(body) {
-            answerOnPromise(MpdClient.idle(), socket, word("idle"), body);
-        });
+//        socketOn(word("idle"), function(body) {
+//            answerOnPromise(MpdClient.idle(), socket, word("idle"), body);
+//        });
 
         socketOn(word("custom"), function(body) {
             if (check("{token: Maybe String, command: String, stopper: Maybe String, parser: Maybe String}", body, socket, word("custom"))) {
@@ -330,30 +330,25 @@ function getStatusAndCurrent(): q.Promise<any[]> {
 var lastIdleSuccess: boolean = true;
 var lastStatus: {[key: string]: any} = {};
 var lastCurrent: MpdEntry = {song: undefined, dir: undefined, playlist: undefined};
-function idleOnce(socketMngr: socketio.SocketManager, word: string): q.Promise<void> {
-    return MpdClient.idle()
-        .then(getStatusAndCurrent)
-        .then(function(results) {
-            var status: {[key: string]: any} = results[0];
-            var current: MpdEntry = results[1];
-            if (!MpdEntries.entryEquals(lastCurrent, current) || !tools.mapEquals(lastStatus, status, ["time", "elapsed"])) {
-                socketEmit(socketMngr.sockets, word, {"status": status, "current": current});
-                lastCurrent = current;
-                lastStatus = status;
-            }
-            lastIdleSuccess = true;
-        }).fail(function(reason: Error) {
-            console.log("Idle error: " + reason.message);
-            if (lastIdleSuccess) {
-                socketEmit(socketMngr.sockets, word, {failure: String(reason)});
-                lastIdleSuccess = false;
-            }
-        });
+function idleOnce(args: any) {
+    getStatusAndCurrent().then(function(results) {
+        var status: {[key: string]: any} = results[0];
+        var current: MpdEntry = results[1];
+        if (!MpdEntries.entryEquals(lastCurrent, current) || !tools.mapEquals(lastStatus, status, ["volume", "repeat", "random", "single", "consume", "state", "song", "songid"])) {
+            socketEmit(args.socketMngr.sockets, args.word, {"status": status, "current": current});
+            lastCurrent = current;
+            lastStatus = status;
+        }
+        lastIdleSuccess = true;
+    }).fail(function(reason: Error) {
+        console.log("Idle error: " + reason.message);
+        if (lastIdleSuccess) {
+            socketEmit(args.socketMngr.sockets, args.word, {failure: String(reason)});
+            lastIdleSuccess = false;
+        }
+    });
 }
 
 function idleLoop(socketMngr: socketio.SocketManager, word: string) {
-    console.log("Entering idle...");
-    idleOnce(socketMngr, word).then(function() {
-        idleLoop(socketMngr, word);
-    });
+    MpdClient.idleLoop("player mixer options", idleOnce, {socketMngr: socketMngr, word: word});
 }

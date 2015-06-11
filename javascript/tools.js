@@ -26,12 +26,10 @@ function override(receiver, provider) {
             if ({}.hasOwnProperty.call(receiver, prop)) {
                 if (typeof provider[prop] === 'object') {
                     this.override(receiver[prop], provider[prop]);
-                }
-                else {
+                } else {
                     receiver[prop] = provider[prop];
                 }
-            }
-            else {
+            } else {
                 receiver[prop] = provider[prop];
             }
         }
@@ -39,6 +37,7 @@ function override(receiver, provider) {
     return receiver;
 }
 exports.override = override;
+
 /**
 * Extend missing content of 'receiver' with 'provider'
 */
@@ -49,8 +48,7 @@ function extend(receiver, provider) {
                 if (typeof provider[prop] === 'object') {
                     this.extend(receiver[prop], provider[prop]);
                 }
-            }
-            else {
+            } else {
                 receiver[prop] = provider[prop];
             }
         }
@@ -58,26 +56,22 @@ function extend(receiver, provider) {
     return receiver;
 }
 exports.extend = extend;
+
 function splitOnce(str, separator) {
     var i = str.indexOf(separator);
     if (i >= 0) {
         return { key: str.slice(0, i), value: str.slice(i + separator.length) };
-    }
-    else {
+    } else {
         return { key: "", value: str.slice(i + separator.length) };
     }
 }
 exports.splitOnce = splitOnce;
-function mapEquals(map1, map2, ignoreKeys) {
-    ignoreKeys = ignoreKeys || [];
-    if (Object.keys(map1).length != Object.keys(map2).length) {
-        return false;
-    }
-    for (var key in map1) {
-        if (ignoreKeys.indexOf(key) < 0) {
-            if (map1[key] !== map2[key]) {
-                return false;
-            }
+
+function mapEquals(map1, map2, keysToCheck) {
+    for (var i = 0; i < keysToCheck.length; i++) {
+        var key = keysToCheck[i];
+        if (map1[key] !== map2[key]) {
+            return false;
         }
     }
     return true;
